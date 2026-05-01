@@ -455,7 +455,79 @@ function getReadableText() {
 
 let sentences = [];
 let currentChunk = 0;
-function speakNextChunk() {} // Forward declaration
+const TTS_STORAGE_KEY = `tts_progress_${currentDay.day || fileParam}`;
+
+// Load saved progress
+function loadTTSProgress() {
+  const saved = localStorage.getItem(TTS_STORAGE_KEY);
+  if (saved !== null) {
+    currentChunk = parseInt(saved, 10);
+  } else {
+    currentChunk = 0;
+  }
+}
+
+// Save progress
+function saveTTSProgress() {
+  localStorage.setItem(TTS_STORAGE_KEY, currentChunk);
+}
+
+// Speak a single chunk
+function speakNextChunk() {
+  if (currentChunk >= sentences.length) {
+    ttsPlaying = false; ttsPaused = false;
+    playBtn.textContent = '▶';
+    ttsLabel.innerHTML = '<strong>✅ Done!</strong> Press ▶ to replay';
+    currentChunk = 0; // reset
+    saveTTSProgress();
+    return;
+  }
+
+  ttsUtterance = new SpeechSynthesisUtterance(sentences[currentChunk].trim());
+  ttsUtterance.rate  = parseFloat(ttsSpeed.value);
+  ttsUtterance.pitch = 1;
+  ttsUtterance.lang  = 'en-US';
+
+  // Pick a nice voice if available
+  const voices = synth.getVoices();
+  const preferred = voices.find(v => v.name.includes('Google') && v.lang === 'en-US')
+                 || voices.find(v => v.lang === 'en-US')
+                 || voices[0];
+  if (preferred) ttsUtterance.voice = preferred;
+
+  ttsUtterance.onstart = () => {
+    ttsPlaying = true; ttsPaused = false;
+    playBtn.textContent = '⏸';
+    const progressText = `[${currentChunk + 1}/${sentences.length}]`;
+    ttsLabel.innerHTML = `<strong>🔊 Reading</strong> ${progressText} at ${ttsSpeed.value}×`;
+  };
+
+  ttsUtterance.onend = () => {
+    // Only proceed to next chunk if we weren't explicitly stopped or paused
+    if (ttsPlaying && !ttsPaused) {
+      currentChunk++;
+      saveTTSProgress();
+      speakNextChunk();
+    }
+  };
+
+  ttsUtterance.onerror = (e) => {
+    // Ignore interrupted errors during manual pause/stop
+    if (e.error === 'interrupted' && (!ttsPlaying || ttsPaused)) return;
+    
+    // Auto-recover from random Chrome 'interrupted' errors
+    if (e.error === 'interrupted') {
+      speakNextChunk(); // Just retry the current chunk
+      return;
+    }
+
+    ttsLabel.innerHTML = `<strong>Error:</strong> ${e.error}`;
+    playBtn.textContent = '▶';
+    ttsPlaying = false;
+  };
+
+  synth.speak(ttsUtterance);
+}
 
 // Play
 function ttsPlay() {
@@ -473,71 +545,16 @@ function ttsPlay() {
   if (!text) { ttsLabel.innerHTML = '<strong>Nothing to read</strong> yet — load a page first'; return; }
   
   sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
-  currentChunk = 0;
+  
+  loadTTSProgress();
+  
+  // If we already finished, start over
+  if (currentChunk >= sentences.length) {
+    currentChunk = 0;
+  }
 
-  speakNextChunk = function() {
-
-  // Chrome bug: SpeechSynthesis interrupts itself on texts longer than 15 seconds.
-  // Fix: split text into smaller chunks (sentences) and queue them up.
-  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
-  let currentChunk = 0;
-
-  function speakNextChunk() {
-    if (currentChunk >= sentences.length) {
-      ttsPlaying = false; ttsPaused = false;
-      playBtn.textContent = '▶';
-      ttsLabel.innerHTML = '<strong>✅ Done!</strong> Press ▶ to replay';
-      return;
-    }
-
-    ttsUtterance = new SpeechSynthesisUtterance(sentences[currentChunk].trim());
-    ttsUtterance.rate  = parseFloat(ttsSpeed.value);
-    ttsUtterance.pitch = 1;
-    ttsUtterance.lang  = 'en-US';
-
-  // Pick a nice voice if available
-  const voices = synth.getVoices();
-  const preferred = voices.find(v => v.name.includes('Google') && v.lang === 'en-US')
-                 || voices.find(v => v.lang === 'en-US')
-                 || voices[0];
-  if (preferred) ttsUtterance.voice = preferred;
-
-  ttsUtterance.onstart = () => {
-    ttsPlaying = true; ttsPaused = false;
-    playBtn.textContent = '⏸';
-    if (currentChunk === 0) {
-      ttsLabel.innerHTML = `<strong>🔊 Reading</strong> ${currentDay.title || 'content'} at ${ttsSpeed.value}×`;
-    }
-  };
-
-  ttsUtterance.onend = () => {
-    // Only proceed to next chunk if we weren't explicitly stopped or paused
-    if (ttsPlaying && !ttsPaused) {
-      currentChunk++;
-      speakNextChunk();
-    }
-  };
-
-  ttsUtterance.onerror = (e) => {
-    // Ignore interrupted errors during manual pause/stop
-    if (e.error === 'interrupted' && (!ttsPlaying || ttsPaused)) return;
-    
-    // Sometimes Chrome still throws 'interrupted', auto-recover if it does
-    if (e.error === 'interrupted') {
-      speakNextChunk(); // Just retry the current chunk
-      return;
-    }
-
-    ttsLabel.innerHTML = `<strong>Error:</strong> ${e.error}`;
-    playBtn.textContent = '▶';
-    ttsPlaying = false;
-  };
-
-  synth.speak(ttsUtterance);
-}
-
-// Start playing the first chunk
-speakNextChunk();
+  // Start playing
+  speakNextChunk();
 }
 
 // Pause
@@ -555,7 +572,7 @@ function ttsStop() {
   synth.cancel();
   ttsPlaying = false; ttsPaused = false;
   playBtn.textContent = '▶';
-  ttsLabel.innerHTML = '<strong>TTS</strong> Press ▶ to start reading';
+  ttsLabel.innerHTML = `<strong>TTS</strong> Stopped at [${currentChunk + 1}/${sentences.length}]`;
 }
 
 // Play/Pause toggle
