@@ -136,9 +136,9 @@
 
   <!-- Hero -->
   <div class="hero">
-    <div class="badge"><span></span> Interview Preparation Tracker</div>
-    <h1>Java Backend Engineer<br>Interview Prep 🚀</h1>
-    <p class="subtitle">Custom Software Engineer · Spring Boot · Microservices · 3–6 Years</p>
+    <div class="badge"><span></span> Accenture · SkillInterview · Virtual</div>
+    <h1>Hey Harshavardhan 👋<br>Let's Crack Accenture!</h1>
+    <p class="subtitle">Custom Software Engineer · Spring Boot · Microservices · May 13 @ 4:00 PM IST</p>
 
     <div class="countdown">
       <div class="count-box"><div class="count-num" id="cd-days">--</div><div class="count-label">Days</div></div>
@@ -148,10 +148,10 @@
     </div>
 
     <div class="stats">
-      <div class="stat"><span class="stat-icon">📅</span> Interview: <span class="stat-val">May 13, 2026</span></div>
-      <div class="stat"><span class="stat-icon">📚</span> Topics: <span class="stat-val">11 Days</span></div>
-      <div class="stat"><span class="stat-icon">❓</span> Q&amp;As: <span class="stat-val">50 Questions</span></div>
-      <div class="stat"><span class="stat-icon">💻</span> Coding Problems: <span class="stat-val">19 Problems</span></div>
+      <div class="stat"><span class="stat-icon">🏢</span> Company: <span class="stat-val">Accenture</span></div>
+      <div class="stat"><span class="stat-icon">🕓</span> Time: <span class="stat-val">4:00 PM – 5:00 PM IST</span></div>
+      <div class="stat"><span class="stat-icon">📅</span> Date: <span class="stat-val">May 13, 2026</span></div>
+      <div class="stat"><span class="stat-icon">🖥️</span> Format: <span class="stat-val">Virtual Interview</span></div>
     </div>
   </div>
 
@@ -214,18 +214,18 @@
 <script>
   // ── Data ──
   const days = [
-    { day:1, date:"May 2",  title:"Core Java 8+",          tags:["Streams","HashMap","JVM","CompletableFuture"],     file:"Day01-CoreJava/notes.md" },
-    { day:2, date:"May 3",  title:"Spring Boot",            tags:["IoC","@Transactional","JPA","Auto-config"],        file:"Day02-SpringBoot/notes.md" },
-    { day:3, date:"May 4",  title:"REST & Microservices",   tags:["HTTP","Circuit Breaker","Saga","API Gateway"],     file:"Day03-REST-Microservices/notes.md" },
-    { day:4, date:"May 5",  title:"Databases",              tags:["ACID","Indexes","N+1","MongoDB"],                  file:"Day04-Databases/notes.md" },
-    { day:5, date:"May 6",  title:"LLD & Design Patterns",  tags:["SOLID","Factory","Strategy","Parking Lot"],        file:"Day05-LLD-DesignPatterns/notes.md" },
-    { day:6, date:"May 7",  title:"Testing",                tags:["JUnit 5","Mockito","Testcontainers","TDD"],        file:"Day06-Testing/notes.md" },
-    { day:7, date:"May 8",  title:"Kafka & Redis",          tags:["Consumer Groups","Cache-Aside","Offsets","TTL"],   file:"Day07-Messaging-Caching/notes.md" },
-    { day:8, date:"May 9",  title:"Docker & Kubernetes",    tags:["Dockerfile","Helm","Probes","HPA"],                file:"Day08-Docker-Kubernetes/notes.md" },
-    { day:9, date:"May 10", title:"Cloud & Observability",  tags:["AWS/Azure","Prometheus","Grafana","Terraform"],    file:"Day09-Cloud-DevOps/notes.md" },
-    { day:10,date:"May 11", title:"Agile & Behavioral",     tags:["STAR Method","Scrum","Sprint","Retrospective"],   file:"Day10-Agile-Behavioral/notes.md" },
-    { day:11,date:"May 12", title:"Mock Interview",         tags:["Mock Q&A","Coding","Final Checklist","Rest 😴"],   file:"Day11-MockInterview/notes.md" },
-    { day:"🎯",date:"May 13",title:"INTERVIEW DAY",         tags:["You've got this! 🚀"],                            file:"resources/cheatsheets/quick-reference.md", special:true },
+    { day:1, date:"May 2",  title:"Core Java 8+",          items:48, src:"java-interview", tags:["Streams","HashMap","JVM","Concurrency"],       file:"Day01-CoreJava/notes.md" },
+    { day:2, date:"May 3",  title:"Spring Boot",            items:52, src:"java-interview", tags:["IoC","@Transactional","JPA","Security"],        file:"Day02-SpringBoot/notes.md" },
+    { day:3, date:"May 4",  title:"REST & Microservices",   items:34, src:"java-interview", tags:["HTTP","Circuit Breaker","Saga","API Gateway"],  file:"Day03-REST-Microservices/notes.md" },
+    { day:4, date:"May 5",  title:"Databases",              items:45, src:"java-interview", tags:["ACID","Indexes","N+1","MongoDB"],               file:"Day04-Databases/notes.md" },
+    { day:5, date:"May 6",  title:"LLD & Design Patterns",  items:38, src:"awesome-lld",    tags:["SOLID","13 Patterns","Parking Lot","BookMyShow"],file:"Day05-LLD-DesignPatterns/notes.md" },
+    { day:6, date:"May 7",  title:"Testing",                items:22, src:"java-interview", tags:["JUnit 5","Mockito","Testcontainers","TDD"],     file:"Day06-Testing/notes.md" },
+    { day:7, date:"May 8",  title:"Kafka & Redis",          items:28, src:"java-interview", tags:["Consumer Groups","Cache-Aside","Offsets","TTL"],file:"Day07-Messaging-Caching/notes.md" },
+    { day:8, date:"May 9",  title:"Docker & Kubernetes",    items:24, src:"devops",         tags:["Dockerfile","K8s Manifests","Probes","HPA"],    file:"Day08-Docker-Kubernetes/notes.md" },
+    { day:9, date:"May 10", title:"Cloud & Observability",  items:20, src:"devops",         tags:["AWS/Azure","Prometheus","Grafana","Terraform"],  file:"Day09-Cloud-DevOps/notes.md" },
+    { day:10,date:"May 11", title:"Agile & Behavioral",     items:18, src:"behavioral",     tags:["STAR Method","Scrum","Sprint","50 Q&As"],       file:"Day10-Agile-Behavioral/notes.md" },
+    { day:11,date:"May 12", title:"Mock Interview",         items:10, src:"all",            tags:["Mock Rounds","Coding","Final Checklist","Rest"],file:"Day11-MockInterview/notes.md" },
+    { day:"🎯",date:"May 13",title:"INTERVIEW DAY",         tags:["You've got this! 🚀"],                                                          file:"resources/cheatsheets/quick-reference.md", special:true },
   ];
 
   // ── LocalStorage for progress ──
@@ -247,10 +247,26 @@
   function renderCards() {
     const grid = document.getElementById('days-grid');
     grid.innerHTML = '';
+    const srcColors = {
+      'java-interview':'rgba(99,102,241,0.18)',
+      'awesome-lld':   'rgba(34,211,238,0.18)',
+      'devops':        'rgba(52,211,153,0.18)',
+      'behavioral':    'rgba(251,191,36,0.18)',
+      'all':           'rgba(167,139,250,0.18)'
+    };
+    const srcLabels = {
+      'java-interview':'📘 java-interview',
+      'awesome-lld':   '🏗️ awesome-lld',
+      'devops':        '🐳 devops',
+      'behavioral':    '🤝 behavioral',
+      'all':           '⭐ all sources'
+    };
     days.forEach(d => {
       const el = document.createElement('div');
       const finished = isDone(d.day);
       el.className = `day-card${finished ? ' done' : ''}${d.special ? ' interview-day' : ''}`;
+      const srcBadge = d.src ? `<span style="font-size:10px;padding:2px 7px;border-radius:100px;background:${srcColors[d.src]||'rgba(99,102,241,0.1)'};color:var(--muted)">${srcLabels[d.src]||d.src}</span>` : '';
+      const itemsBadge = d.items ? `<span style="font-size:10px;padding:2px 7px;border-radius:100px;background:rgba(52,211,153,0.1);color:var(--green);border:1px solid rgba(52,211,153,0.2)">${d.items} items</span>` : '';
       el.innerHTML = `
         <div class="card-top">
           <div>
@@ -260,8 +276,9 @@
           ${d.special ? '<span style="font-size:22px">🎯</span>' : `<div class="status-dot${finished?' done':''}" title="${finished?'Done — click to undo':'Click to mark done'}"></div>`}
         </div>
         <div class="card-title">${d.title}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">${srcBadge}${itemsBadge}</div>
         <div class="card-tags">${d.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-        <a class="card-link" href="${d.file}">📄 Open Notes →</a>
+        <a class="card-link" href="day.html?file=${d.file}" onclick="event.stopPropagation()">📄 Open Notes →</a>
       `;
       if (!d.special) el.addEventListener('click', () => toggleDay(d.day));
       grid.appendChild(el);
@@ -281,11 +298,11 @@
 
   // ── Countdown Timer ──
   function updateCountdown() {
-    const target = new Date('2026-05-13T09:00:00+05:30');
+    const target = new Date('2026-05-13T16:00:00+05:30');  // 4:00 PM IST — Accenture SkillInterview
     const now = new Date();
     let diff = target - now;
     if (diff < 0) {
-      document.querySelector('.countdown').innerHTML = '<div style="font-size:1.4rem;font-weight:700;color:var(--yellow)">🎯 Interview Day! Good luck!</div>';
+      document.querySelector('.countdown').innerHTML = '<div style="font-size:1.4rem;font-weight:700;color:var(--yellow)">🎯 You are in your interview right now! Give it your best, Harshavardhan! 💪</div>';
       return;
     }
     const d = Math.floor(diff / 86400000);

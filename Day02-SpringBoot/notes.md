@@ -1,215 +1,125 @@
-# 📘 Day 2 – Spring Boot (May 3rd)
+# 📘 Day 2 — Spring Boot (May 3rd)
 
-> **Goal:** Understand the full lifecycle of a Spring Boot app — from startup to request handling.
-
----
-
-## ✅ Checklist
-- [ ] IoC & Dependency Injection
-- [ ] Bean Lifecycle & Scopes
-- [ ] Spring Boot Auto-configuration
-- [ ] Spring Data JPA (Repositories, Transactions)
-- [ ] Spring Security basics (JWT)
-- [ ] Profiles & application.yml
+> Each item: **Question** + **Answer**. Check off once you understand it.
 
 ---
 
-## 1. IoC & Dependency Injection
+## 🔷 Spring Core — IoC & DI
 
-**Inversion of Control (IoC):** Instead of you creating objects (`new Service()`), Spring creates and manages them.
+- [ ] **What is Inversion of Control (IoC)?** — Instead of your code creating objects (`new Service()`), the Spring container creates and manages them. You just declare what you need via `@Autowired` and Spring injects it. Control of object creation is *inverted* to the framework.
 
-**Three types of Dependency Injection:**
+- [ ] **3 types of Dependency Injection?** — **Constructor injection** (recommended: makes dependencies explicit, easy to test). **Setter injection** (for optional dependencies). **Field injection** (avoid: hides dependencies, breaks testability). Constructor injection is preferred because it enables immutability with `final` fields.
+
+- [ ] **`BeanFactory` vs `ApplicationContext`?** — `BeanFactory`: lazy initialization, basic DI. `ApplicationContext`: extends BeanFactory, adds event publishing, internationalization, AOP, eager initialization. Always use `ApplicationContext` in practice.
+
+- [ ] **What is a Spring Bean?** — Any Java object managed by the Spring IoC container. Registered via `@Component` (and its stereotypes) or `@Bean` in a `@Configuration` class.
+
+- [ ] **Bean Scopes: `singleton` vs `prototype`?** — `singleton` (default): one instance per Spring context, shared across all injections. `prototype`: new instance created every time it's requested. Web scopes: `request` (per HTTP request), `session` (per HTTP session).
+
+- [ ] **`@Component` vs `@Service` vs `@Repository`?** — All register beans. `@Service`: marks business layer (semantic). `@Repository`: marks data layer + enables **Spring exception translation** (converts `SQLException` → `DataAccessException`). `@Component`: generic.
+
+- [ ] **`@Bean` vs `@Component`?** — `@Component`: class-level, Spring auto-detects via classpath scan. `@Bean`: method-level inside `@Configuration`, you control creation logic (useful for third-party classes you can't annotate).
+
+- [ ] **`@Qualifier` vs `@Primary`?** — When multiple beans match a type: `@Primary` marks the default one. `@Qualifier("beanName")` at injection point selects a specific one. `@Qualifier` takes priority over `@Primary`.
+
+---
+
+## 🔷 Bean Lifecycle
+
+- [ ] **Spring Bean lifecycle steps?** — 1) Instantiate (constructor) → 2) Inject dependencies → 3) `@PostConstruct` (init logic, e.g. warm caches, validate config) → 4) Bean ready for use → 5) `@PreDestroy` (cleanup: close connections, flush buffers) → 6) Container shutdown.
+
+- [ ] **What is `@PostConstruct`?** — Runs once after DI is complete. Use for: initializing caches, starting background threads, validating config values. Better than constructor (DI is complete). `@PreDestroy` runs on container shutdown for cleanup.
+
+---
+
+## 🔷 Spring Boot
+
+- [ ] **What does `@SpringBootApplication` do?** — Shorthand for 3 annotations: `@Configuration` (defines bean factory), `@EnableAutoConfiguration` (auto-configure based on classpath), `@ComponentScan` (scan current package for beans).
+
+- [ ] **How does Spring Boot auto-configuration work?** — At startup, reads `META-INF/spring/...AutoConfiguration.imports`. Each class has `@Conditional` annotations (`@ConditionalOnClass`, `@ConditionalOnMissingBean`). For example, if `DataSource` is on classpath, auto-configures Hibernate without you writing any config.
+
+- [ ] **What is `@Value` vs `@ConfigurationProperties`?** — `@Value("${app.name}")`: injects a single property. `@ConfigurationProperties(prefix="app")`: maps an entire group of properties to a Java class with validation support. Use `@ConfigurationProperties` for complex config.
+
+- [ ] **What is Spring Boot Actuator?** — Provides production-ready endpoints: `/actuator/health` (liveness/readiness), `/actuator/metrics`, `/actuator/info`, `/actuator/prometheus`. Critical for Kubernetes health probes.
+
+- [ ] **`spring.jpa.hibernate.ddl-auto` options?** — `none`: do nothing. `validate`: check schema matches entities (safe for prod). `update`: alter tables (risky for prod). `create`: drop+create on startup. `create-drop`: drop on shutdown. **Use `validate` or `none` in production. Use Flyway/Liquibase instead.**
+
+---
+
+## 🔷 Spring Data JPA
+
+- [ ] **What is JPA vs Hibernate vs Spring Data JPA?** — JPA: Java specification (interface). Hibernate: JPA *implementation* (most popular). Spring Data JPA: abstraction over Hibernate that auto-generates repos, reduces boilerplate. All 3 work together.
+
+- [ ] **JPA relationships — what is `@OneToMany` + `@ManyToOne`?** — Customer has many Orders: `@OneToMany(mappedBy="customer")` on Customer. Order has one Customer: `@ManyToOne @JoinColumn(name="customer_id")` on Order. Always define `mappedBy` on the *non-owning* side.
+
+- [ ] **`FetchType.LAZY` vs `FetchType.EAGER`?** — `LAZY`: collection loaded only when accessed (better performance). `EAGER`: loaded immediately with parent. **Defaults**: `@OneToMany` = LAZY, `@ManyToOne` = EAGER. Always prefer LAZY to avoid unexpected queries.
+
+- [ ] **What is the N+1 problem?** — 1 query fetches N orders. For each order, a separate query fetches its items → N+1 total queries. **Fix 1**: `JOIN FETCH` in JPQL. **Fix 2**: `@EntityGraph(attributePaths="items")` on repo method. **Fix 3**: `@BatchSize(size=50)`.
+
+- [ ] **What is `@Transactional`?** — Spring wraps the method in a DB transaction. If method completes normally → commit. If exception (unchecked by default) → rollback. Place on *service* layer, not repository or controller.
+
+- [ ] **Propagation types — REQUIRED vs REQUIRES_NEW?** — `REQUIRED` (default): join existing transaction, or create new one if none. `REQUIRES_NEW`: always suspend existing transaction and start a fresh one. Use `REQUIRES_NEW` for audit logs that must be saved even if main transaction rolls back.
+
+- [ ] **Isolation levels?** — `READ_UNCOMMITTED` (dirty reads possible) → `READ_COMMITTED` (default PG, prevents dirty reads) → `REPEATABLE_READ` (prevents non-repeatable reads) → `SERIALIZABLE` (safest, slowest, prevents phantom reads).
+
+- [ ] **The `@Transactional` self-invocation trap?** — Calling a `@Transactional` method from within the **same class** bypasses the Spring proxy → transaction is NOT applied! Fix: inject `self` (`@Autowired private MyService self;`) or move the method to another bean.
+
+- [ ] **`readOnly = true` in `@Transactional`?** — Hint to Hibernate to skip dirty checking (won't track changes to entities). Hibernate may skip flushing, improving performance. Always use on read-only service methods.
+
+---
+
+## 🔷 Spring MVC (REST)
+
+- [ ] **`@PathVariable` vs `@RequestParam` vs `@RequestBody`?** — `@PathVariable`: from URL path `/orders/{id}`. `@RequestParam`: from query string `/orders?status=ACTIVE`. `@RequestBody`: deserializes JSON request body to Java object (uses Jackson).
+
+- [ ] **How does global exception handling work?** — `@RestControllerAdvice` on a class. Inside, `@ExceptionHandler(SomeException.class)` methods intercept that exception across all controllers and return a consistent error response. Avoids try-catch in every controller.
+
+- [ ] **What is `HandlerInterceptor`?** — Intercepts requests before/after controller execution. `preHandle()` (before), `postHandle()` (after), `afterCompletion()` (after view rendered). Use for: logging, auth, rate limiting. More Spring-aware than a Servlet Filter.
+
+- [ ] **Filter vs HandlerInterceptor — order of execution?** — `Filter` (Servlet level, runs first) → `DispatcherServlet` → `HandlerInterceptor` (Spring level) → `Controller`. Filters are for low-level concerns (CORS, encoding). Interceptors for Spring-specific concerns (auth, logging).
+
+---
+
+## 📝 Key Code to Write from Memory
+
 ```java
-// 1. Constructor Injection (RECOMMENDED)
+// 1. Constructor injection (RECOMMENDED)
 @Service
 public class OrderService {
     private final OrderRepository repo;
+    private final EmailService emailService;
 
-    @Autowired  // optional in newer Spring versions if single constructor
-    public OrderService(OrderRepository repo) {
+    public OrderService(OrderRepository repo, EmailService emailService) {
         this.repo = repo;
+        this.emailService = emailService;
     }
 }
 
-// 2. Field Injection (NOT recommended - hides dependencies)
-@Service
-public class OrderService {
-    @Autowired
-    private OrderRepository repo;
-}
-
-// 3. Setter Injection (use for optional dependencies)
-@Service
-public class OrderService {
-    private OrderRepository repo;
-
-    @Autowired
-    public void setRepo(OrderRepository repo) {
-        this.repo = repo;
-    }
-}
-```
-
----
-
-## 2. Bean Scopes
-
-| Scope | Description |
-|---|---|
-| `singleton` | **Default.** One instance per Spring context |
-| `prototype` | New instance every time it's requested |
-| `request` | One instance per HTTP request (Web apps) |
-| `session` | One instance per HTTP session (Web apps) |
-
-```java
-@Bean
-@Scope("prototype")
-public ExpensiveObject expensiveObject() {
-    return new ExpensiveObject();
-}
-```
-
----
-
-## 3. Bean Lifecycle
-
-```
-Container Created
-       ↓
-Bean Instantiated (constructor)
-       ↓
-Dependencies Injected (@Autowired)
-       ↓
-@PostConstruct (init logic)
-       ↓
-Bean Ready to Use
-       ↓
-@PreDestroy (cleanup logic)
-       ↓
-Container Shutdown
-```
-
-```java
+// 2. @ConfigurationProperties
+@ConfigurationProperties(prefix = "app")
 @Component
-public class MyBean {
+public class AppConfig {
+    private String name;
+    private int maxConnections = 10; // default value
+    // getters & setters
+}
 
-    @PostConstruct
-    public void init() {
-        System.out.println("Bean initialized! Connect to DB, warm caches here.");
-    }
+// 3. Fix N+1 with JOIN FETCH
+@Query("SELECT o FROM Order o JOIN FETCH o.items WHERE o.customerId = :cid")
+List<Order> findWithItems(@Param("cid") Long customerId);
 
-    @PreDestroy
-    public void cleanup() {
-        System.out.println("Bean destroyed! Close connections here.");
-    }
+// 4. @Transactional with REQUIRES_NEW for audit
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+public void saveAuditLog(String action) {
+    // Saves even if caller's transaction rolls back
+    auditRepo.save(new AuditLog(action, Instant.now()));
 }
 ```
 
 ---
 
-## 4. Spring Data JPA
-
-### Repository Hierarchy
-```
-Repository (marker)
-    └── CrudRepository (CRUD methods)
-            └── PagingAndSortingRepository
-                    └── JpaRepository (flush, batch) ← Use this
-```
-
-### Custom Queries
-```java
-public interface OrderRepository extends JpaRepository<Order, Long> {
-
-    // Derived Query (Spring generates SQL)
-    List<Order> findByStatusAndCustomerId(String status, Long customerId);
-
-    // JPQL Query
-    @Query("SELECT o FROM Order o WHERE o.totalAmount > :amount")
-    List<Order> findExpensiveOrders(@Param("amount") Double amount);
-
-    // Native SQL
-    @Query(value = "SELECT * FROM orders WHERE status = ?1", nativeQuery = true)
-    List<Order> findByStatusNative(String status);
-}
-```
-
-### @Transactional — MOST IMPORTANT
-```java
-@Service
-@Transactional  // All methods transactional by default
-public class OrderService {
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void createOrder(Order order) {
-        // Runs in a NEW transaction, even if called from within another transaction
-    }
-
-    @Transactional(isolation = Isolation.REPEATABLE_READ)
-    public Order getOrder(Long id) {
-        // Prevents non-repeatable reads
-    }
-
-    @Transactional(readOnly = true)  // Performance optimization for reads
-    public List<Order> getAllOrders() { ... }
-}
-```
-
-**Propagation levels to know:**
-- `REQUIRED` (default): Join existing tx or create new one
-- `REQUIRES_NEW`: Always create a new tx, suspend existing
-- `SUPPORTS`: Use existing tx if present, else non-transactional
-- `NEVER`: Must NOT run within a transaction
-
----
-
-## 5. Auto-Configuration & application.yml
-
-```yaml
-# application.yml
-spring:
-  application:
-    name: order-service
-  datasource:
-    url: jdbc:postgresql://localhost:5432/orders_db
-    username: ${DB_USER:postgres}   # env var with default fallback
-    password: ${DB_PASS:secret}
-  jpa:
-    hibernate:
-      ddl-auto: validate           # never use 'create-drop' in prod!
-    show-sql: false
-
-server:
-  port: 8080
-
----
-# Profile-specific overrides
-spring:
-  config:
-    activate:
-      on-profile: dev
-  jpa:
-    show-sql: true
-```
-
-**Profiles:**
-```bash
-# Run with dev profile
-java -jar app.jar --spring.profiles.active=dev
-
-# Or in IDE
--Dspring.profiles.active=dev
-```
-
----
-
-## 6. Key Interview Q&A
-
-| Question | Answer |
-|---|---|
-| `@Component` vs `@Service` vs `@Repository`? | All register beans. `@Service` = business layer, `@Repository` = adds exception translation |
-| What is `@SpringBootApplication`? | = `@Configuration` + `@EnableAutoConfiguration` + `@ComponentScan` |
-| How does auto-configuration work? | Spring reads `META-INF/spring.factories`, checks conditions (`@ConditionalOnClass`) |
-| N+1 Problem in JPA? | Fetching parent + N separate queries for children. Fix: `@EntityGraph` or JOIN FETCH |
-| What is `@Transactional` self-invocation problem? | Calling a `@Transactional` method from within the same class bypasses the proxy! |
-| `FetchType.LAZY` vs `EAGER`? | LAZY = load only when accessed, EAGER = load immediately. Use LAZY by default |
+## 🔗 Study References
+- [enhorse/java-interview — Spring](https://github.com/enhorse/java-interview/blob/master/spring.md)
+- [Baeldung — Spring Boot Interview Questions](https://www.baeldung.com/spring-boot-interview-questions)
+- [Baeldung — Spring @Transactional](https://www.baeldung.com/transaction-configuration-with-jpa-and-spring)
+- [Baeldung — N+1 Problem](https://www.baeldung.com/hibernate-show-sql)

@@ -1,283 +1,159 @@
-# 📘 Day 5 – Low Level Design (LLD) & Design Patterns (May 6th)
+# 📘 Day 5 — LLD & Design Patterns (May 6th)
 
-> **Goal:** Write clean, SOLID, extensible code and design a system class-by-class.
-
----
-
-## ✅ Checklist
-- [ ] SOLID Principles (know each with Java example)
-- [ ] Creational Patterns: Singleton, Factory, Builder
-- [ ] Structural Patterns: Decorator, Adapter
-- [ ] Behavioral Patterns: Strategy, Observer
-- [ ] Practice: Design a Parking Lot
+> **Source alignment:** [ashishps1/awesome-low-level-design](https://github.com/ashishps1/awesome-low-level-design) — Complete coverage of all patterns and problems
 
 ---
 
-## 1. SOLID Principles
+## ✅ Master Checklist
 
-### S — Single Responsibility
-```java
-// ❌ BAD: One class doing too much
-class OrderService {
-    public void placeOrder(Order o) { ... }
-    public void sendEmailConfirmation(Order o) { ... }  // Not its job!
-    public void generateInvoicePdf(Order o) { ... }     // Not its job!
-}
+### 🔷 SOLID Principles (Must explain each with Java example)
+- [ ] **S** — Single Responsibility Principle: One class, one reason to change.
+- [ ] **O** — Open/Closed Principle: Open for extension, closed for modification.
+- [ ] **L** — Liskov Substitution Principle: Subtypes must be substitutable for their parent.
+- [ ] **I** — Interface Segregation Principle: Many small interfaces > one fat interface.
+- [ ] **D** — Dependency Inversion Principle: Depend on abstractions, not concretions.
 
-// ✅ GOOD: Each class has ONE reason to change
-class OrderService { public void placeOrder(Order o) { ... } }
-class EmailService { public void sendConfirmation(Order o) { ... } }
-class InvoiceService { public void generatePdf(Order o) { ... } }
+### 🔷 Creational Patterns
+- [ ] **Singleton** — Only one instance. Thread-safe double-checked locking. Enum Singleton.
+- [ ] **Factory Method** — Subclasses decide which class to instantiate.
+- [ ] **Abstract Factory** — Family of related objects without specifying concrete classes.
+- [ ] **Builder** — Step-by-step construction of complex objects. (Lombok `@Builder`)
+- [ ] **Prototype** — Clone existing objects instead of creating new ones.
+
+### 🔷 Structural Patterns
+- [ ] **Adapter** — Bridge between incompatible interfaces.
+- [ ] **Decorator** — Add behaviour dynamically without modifying the class.
+- [ ] **Facade** — Simplified interface to a complex subsystem.
+- [ ] **Proxy** — Surrogate / placeholder (Spring AOP uses this!).
+- [ ] **Composite** — Tree structures where individual and composites are treated uniformly.
+- [ ] **Bridge** — Decouple abstraction from implementation.
+- [ ] **Flyweight** — Share common data to reduce memory (String Pool is an example).
+
+### 🔷 Behavioral Patterns
+- [ ] **Strategy** — Interchangeable algorithms. (e.g., sorting strategies, payment methods)
+- [ ] **Observer** — One-to-many dependency. Publisher/Subscriber. (Spring `@EventListener`)
+- [ ] **Command** — Encapsulate a request as an object. Supports undo/redo.
+- [ ] **Template Method** — Skeleton algorithm in base class, steps overridden in subclass.
+- [ ] **Chain of Responsibility** — Pass request through a chain of handlers. (Spring Filter chain)
+- [ ] **State** — Object behaviour changes based on internal state.
+- [ ] **Iterator** — Sequential access to elements without exposing internal structure.
+- [ ] **Mediator** — Central object that handles communication between objects.
+
+---
+
+## ✅ LLD Design Problems — Practice Each One
+
+### From [awesome-low-level-design](https://github.com/ashishps1/awesome-low-level-design):
+
+#### Tier 1 — Must Practice (Most Common in Interviews)
+- [ ] 🅿️ **Parking Lot** — Vehicles, Spots (Small/Medium/Large), Ticket, Payment
+- [ ] 🎬 **BookMyShow** — Movie, Theater, Screen, Seat, Booking
+- [ ] 🛒 **Shopping Cart / E-Commerce** — Product, Cart, Order, Payment Strategy
+- [ ] 🏧 **ATM Machine** — Card, Account, Transaction, State pattern
+- [ ] 🚗 **Ride Sharing (Uber/Ola)** — Driver, Rider, Trip, Pricing Strategy
+
+#### Tier 2 — Good to Practice
+- [ ] 📚 **Library Management System** — Book, Member, Loan, Search
+- [ ] 🏨 **Hotel Booking System** — Room, Reservation, Guest
+- [ ] 🍕 **Food Delivery (Zomato/Swiggy)** — Restaurant, Menu, Order, DeliveryAgent
+- [ ] ♟️ **Chess Game** — Board, Piece hierarchy, Move validation
+- [ ] 🚦 **Traffic Signal Controller** — State pattern with timer
+
+#### Tier 3 — Nice to Know
+- [ ] 💬 **Chat Application** — User, Group, Message, Observer pattern
+- [ ] 📦 **Inventory Management** — Product, Stock, Supplier
+- [ ] 🏋️ **Gym Management System** — Member, Trainer, Slot, Subscription
+
+---
+
+## 📝 Template — How to Answer ANY LLD Question
+
 ```
+Step 1: Clarify Requirements (2 min)
+  → "What are the actors / users of this system?"
+  → "What are the core use cases?"
+  → "Any constraints I should know?"
 
-### O — Open/Closed Principle
-```java
-// ❌ BAD: Adding new payment type requires modifying this class
-class PaymentProcessor {
-    public void process(String type, double amount) {
-        if (type.equals("CREDIT")) { ... }
-        else if (type.equals("DEBIT")) { ... }
-        // Must modify code every time a new type is added!
-    }
-}
+Step 2: Identify Core Entities (2 min)
+  → List the main classes/objects needed
 
-// ✅ GOOD: Open for extension, closed for modification
-interface PaymentStrategy {
-    void process(double amount);
-}
-class CreditCardPayment implements PaymentStrategy { ... }
-class UpiPayment implements PaymentStrategy { ... }
-// Adding PayPal = new class, no modification needed
-```
+Step 3: Define Relationships (2 min)
+  → Has-a (composition) vs Is-a (inheritance)
+  → Cardinality: one-to-many, many-to-many
 
-### L — Liskov Substitution
-```java
-// ❌ BAD: Square violates LSP when extending Rectangle
-class Rectangle {
-    void setWidth(int w) { this.width = w; }
-    void setHeight(int h) { this.height = h; }
-    int area() { return width * height; }
-}
-class Square extends Rectangle {
-    void setWidth(int w) { this.width = this.height = w; }  // Breaks expected behavior!
-}
+Step 4: Apply Design Patterns (3 min)
+  → "I'll use Strategy for payment types"
+  → "Observer for notifications"
+  → "Factory for creating vehicles"
 
-// ✅ GOOD: Separate shapes, no inheritance issues
-interface Shape { int area(); }
-class Rectangle implements Shape { ... }
-class Square implements Shape { ... }
-```
-
-### I — Interface Segregation
-```java
-// ❌ BAD: Fat interface forces classes to implement unused methods
-interface Animal {
-    void eat();
-    void fly();   // What about dogs?
-    void swim();  // What about eagles?
-}
-
-// ✅ GOOD: Small, specific interfaces
-interface Eatable { void eat(); }
-interface Flyable { void fly(); }
-interface Swimmable { void swim(); }
-class Duck implements Eatable, Flyable, Swimmable { ... }
-class Dog implements Eatable, Swimmable { ... }
-```
-
-### D — Dependency Inversion
-```java
-// ❌ BAD: High-level module depends on low-level module
-class OrderService {
-    private MySQLDatabase db = new MySQLDatabase();  // Tightly coupled!
-}
-
-// ✅ GOOD: Both depend on abstraction
-interface OrderRepository { Order findById(Long id); }
-class OrderService {
-    private final OrderRepository repo;  // Depends on interface
-    OrderService(OrderRepository repo) { this.repo = repo; }
-}
-class MySQLOrderRepository implements OrderRepository { ... }
-class MongoOrderRepository implements OrderRepository { ... }
+Step 5: Write the Code (10+ min)
+  → Start with interfaces/abstractions
+  → Implement concrete classes
+  → Wire them in a main/service class
 ```
 
 ---
 
-## 2. Design Patterns
-
-### Singleton — One instance globally
-```java
-public class DatabaseConnectionPool {
-    private static volatile DatabaseConnectionPool instance;
-
-    private DatabaseConnectionPool() { /* expensive init */ }
-
-    // Thread-safe double-checked locking
-    public static DatabaseConnectionPool getInstance() {
-        if (instance == null) {
-            synchronized (DatabaseConnectionPool.class) {
-                if (instance == null) {
-                    instance = new DatabaseConnectionPool();
-                }
-            }
-        }
-        return instance;
-    }
-}
-```
-
-### Factory Pattern — Decouple creation from usage
-```java
-interface Notification { void send(String message); }
-class EmailNotification implements Notification { ... }
-class SmsNotification implements Notification { ... }
-class PushNotification implements Notification { ... }
-
-class NotificationFactory {
-    public static Notification create(String type) {
-        return switch (type) {
-            case "EMAIL" -> new EmailNotification();
-            case "SMS" -> new SmsNotification();
-            case "PUSH" -> new PushNotification();
-            default -> throw new IllegalArgumentException("Unknown: " + type);
-        };
-    }
-}
-// Usage: NotificationFactory.create("EMAIL").send("Order confirmed!");
-```
-
-### Builder Pattern — Complex object construction
-```java
-// Used everywhere in Spring Boot (ResponseEntity.ok().body(...))
-public class Order {
-    private final Long id;
-    private final String status;
-    private final List<OrderItem> items;
-    private final LocalDateTime createdAt;
-
-    private Order(Builder builder) { ... }
-
-    public static class Builder {
-        private Long id;
-        private String status = "PENDING";
-        private List<OrderItem> items = new ArrayList<>();
-        private LocalDateTime createdAt = LocalDateTime.now();
-
-        public Builder id(Long id) { this.id = id; return this; }
-        public Builder status(String status) { this.status = status; return this; }
-        public Builder items(List<OrderItem> items) { this.items = items; return this; }
-        public Order build() { return new Order(this); }
-    }
-}
-
-// Usage
-Order order = new Order.Builder()
-    .id(1L)
-    .status("CONFIRMED")
-    .items(cartItems)
-    .build();
-```
-
-### Strategy Pattern — Interchangeable algorithms
-```java
-// Sort a list of products by different criteria
-interface SortStrategy {
-    List<Product> sort(List<Product> products);
-}
-class SortByPrice implements SortStrategy { ... }
-class SortByRating implements SortStrategy { ... }
-class SortByPopularity implements SortStrategy { ... }
-
-class ProductService {
-    private SortStrategy strategy;
-
-    public void setSortStrategy(SortStrategy strategy) {
-        this.strategy = strategy;
-    }
-
-    public List<Product> getProducts() {
-        return strategy.sort(allProducts);
-    }
-}
-```
-
-### Observer Pattern — Event-driven (basis of Spring Events)
-```java
-// Publisher
-class OrderService {
-    @Autowired
-    private ApplicationEventPublisher eventPublisher;
-
-    public Order createOrder(CreateOrderRequest req) {
-        Order order = orderRepository.save(new Order(req));
-        eventPublisher.publishEvent(new OrderCreatedEvent(order));  // Fire event
-        return order;
-    }
-}
-
-// Subscribers (loose coupling!)
-@Component
-class EmailListener {
-    @EventListener
-    public void onOrderCreated(OrderCreatedEvent event) {
-        emailService.send(event.getOrder().getCustomerEmail(), "Order Confirmed!");
-    }
-}
-
-@Component
-class InventoryListener {
-    @EventListener
-    public void onOrderCreated(OrderCreatedEvent event) {
-        inventoryService.reserveItems(event.getOrder().getItems());
-    }
-}
-```
-
----
-
-## 3. LLD Practice: Parking Lot
+## 📝 Parking Lot — Full Solution Skeleton
 
 ```java
-// Entities
+// Enums
 enum VehicleType { MOTORCYCLE, CAR, TRUCK }
-enum SpotSize { SMALL, MEDIUM, LARGE }
 enum SpotStatus { AVAILABLE, OCCUPIED }
 
+// Entities
 class Vehicle {
-    private String licensePlate;
+    private String plate;
     private VehicleType type;
 }
 
 class ParkingSpot {
-    private int spotId;
-    private SpotSize size;
-    private SpotStatus status;
-    private Vehicle currentVehicle;
+    private int id;
+    private VehicleType supportedType;  // MOTORCYCLE supports all, LARGE supports TRUCK
+    private SpotStatus status = SpotStatus.AVAILABLE;
+    private Vehicle vehicle;
 
     public boolean canFit(Vehicle v) {
-        return switch (v.getType()) {
+        return switch(v.getType()) {
             case MOTORCYCLE -> true;
-            case CAR -> size == SpotSize.MEDIUM || size == SpotSize.LARGE;
-            case TRUCK -> size == SpotSize.LARGE;
+            case CAR -> supportedType == VehicleType.CAR || supportedType == VehicleType.TRUCK;
+            case TRUCK -> supportedType == VehicleType.TRUCK;
         };
     }
 }
 
-class ParkingLot {
-    private List<ParkingSpot> spots;
+class Ticket {
+    private String id;
+    private Vehicle vehicle;
+    private ParkingSpot spot;
+    private LocalDateTime entryTime;
+}
 
-    public Optional<ParkingSpot> findAvailableSpot(Vehicle vehicle) {
-        return spots.stream()
-            .filter(s -> s.getStatus() == SpotStatus.AVAILABLE)
-            .filter(s -> s.canFit(vehicle))
-            .findFirst();
+// Strategy for pricing
+interface PricingStrategy {
+    double calculate(VehicleType type, long hours);
+}
+class HourlyPricing implements PricingStrategy { ... }
+class DailyCapPricing implements PricingStrategy { ... }
+
+// Main Lot (Singleton)
+class ParkingLot {
+    private static ParkingLot instance;
+    private List<ParkingSpot> spots;
+    private PricingStrategy pricing;
+
+    private ParkingLot() { ... }
+    public static synchronized ParkingLot getInstance() {
+        if (instance == null) instance = new ParkingLot();
+        return instance;
     }
 
     public Ticket park(Vehicle vehicle) {
-        ParkingSpot spot = findAvailableSpot(vehicle)
-            .orElseThrow(() -> new RuntimeException("Parking full!"));
-        spot.setCurrentVehicle(vehicle);
+        ParkingSpot spot = spots.stream()
+            .filter(s -> s.getStatus() == SpotStatus.AVAILABLE && s.canFit(vehicle))
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException("Lot is full!"));
+        spot.setVehicle(vehicle);
         spot.setStatus(SpotStatus.OCCUPIED);
         return new Ticket(vehicle, spot, LocalDateTime.now());
     }
@@ -285,7 +161,13 @@ class ParkingLot {
     public double checkout(Ticket ticket) {
         long hours = ChronoUnit.HOURS.between(ticket.getEntryTime(), LocalDateTime.now());
         ticket.getSpot().setStatus(SpotStatus.AVAILABLE);
-        return calculateFee(ticket.getVehicle().getType(), hours);
+        return pricing.calculate(ticket.getVehicle().getType(), hours);
     }
 }
 ```
+
+---
+
+## 🔗 Reference
+- [ashishps1/awesome-low-level-design](https://github.com/ashishps1/awesome-low-level-design)
+- [SOLID principles with Java examples](https://www.baeldung.com/solid-principles)
