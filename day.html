@@ -156,6 +156,43 @@
     ::-webkit-scrollbar { width:6px; height:6px; }
     ::-webkit-scrollbar-track { background:var(--bg); }
     ::-webkit-scrollbar-thumb { background:rgba(99,102,241,0.3); border-radius:4px; }
+
+    /* ── Audio Player Bar ── */
+    .audio-bar {
+      position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+      z-index:999; display:flex; align-items:center; gap:10px;
+      background:rgba(17,24,39,0.95); backdrop-filter:blur(20px);
+      border:1px solid var(--border); border-radius:100px;
+      padding:10px 20px; box-shadow:0 8px 40px rgba(0,0,0,0.5);
+      min-width:360px; transition:opacity .3s;
+    }
+    .audio-bar.hidden { opacity:0; pointer-events:none; }
+    .audio-btn {
+      width:36px; height:36px; border-radius:50%; border:none; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; font-size:15px;
+      transition:.2s; flex-shrink:0;
+    }
+    .audio-btn.play  { background:var(--accent); color:#fff; }
+    .audio-btn.play:hover { background:#4f46e5; transform:scale(1.1); }
+    .audio-btn.stop  { background:var(--surface2); color:var(--muted); }
+    .audio-btn.stop:hover { background:rgba(248,113,113,0.2); color:var(--red,#f87171); }
+    .audio-label { font-size:12px; color:var(--muted); white-space:nowrap; flex:1; min-width:0;
+      overflow:hidden; text-overflow:ellipsis; }
+    .audio-label strong { color:var(--accent2); }
+    .speed-select {
+      background:var(--surface2); border:1px solid var(--border); color:var(--text);
+      font-size:12px; padding:4px 8px; border-radius:20px; cursor:pointer; outline:none;
+    }
+    .audio-toggle {
+      position:fixed; bottom:24px; right:24px; z-index:1000;
+      width:44px; height:44px; border-radius:50%; border:1px solid var(--border);
+      background:var(--surface); color:var(--accent3); font-size:18px;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 4px 20px rgba(0,0,0,0.4); transition:.2s;
+    }
+    .audio-toggle:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+    /* Highlight spoken word */
+    .tts-highlight { background:rgba(99,102,241,0.35); border-radius:3px; padding:0 2px; }
   </style>
 </head>
 <body>
@@ -187,6 +224,23 @@
     <p style="color:var(--muted)">Loading your study notes...</p>
   </div>
   <div id="content" class="md-content" style="display:none"></div>
+</div>
+
+<!-- 🔊 Audio Toggle Button -->
+<button class="audio-toggle" id="audio-toggle" title="Text to Speech">🔊</button>
+
+<!-- 🔊 Audio Player Bar -->
+<div class="audio-bar hidden" id="audio-bar">
+  <button class="audio-btn play" id="tts-play" title="Play / Pause">▶</button>
+  <button class="audio-btn stop" id="tts-stop" title="Stop">⏹</button>
+  <span class="audio-label" id="tts-label"><strong>TTS</strong> Press ▶ to start reading</span>
+  <select class="speed-select" id="tts-speed">
+    <option value="0.75">0.75×</option>
+    <option value="1" selected>1×</option>
+    <option value="1.25">1.25×</option>
+    <option value="1.5">1.5×</option>
+    <option value="2">2×</option>
+  </select>
 </div>
 
 <script>
@@ -340,6 +394,129 @@ async function loadMarkdown(file) {
 // ── Init ──
 const fileToLoad = fileParam || currentDay.file;
 loadMarkdown(fileToLoad);
+
+// ── 🔊 Text-to-Speech Engine ──
+const synth = window.speechSynthesis;
+let ttsUtterance = null;
+let ttsPlaying = false;
+let ttsPaused  = false;
+
+const audioBar    = document.getElementById('audio-bar');
+const audioToggle = document.getElementById('audio-toggle');
+const playBtn     = document.getElementById('tts-play');
+const stopBtn     = document.getElementById('tts-stop');
+const ttsLabel    = document.getElementById('tts-label');
+const ttsSpeed    = document.getElementById('tts-speed');
+
+// Show/hide audio bar
+audioToggle.addEventListener('click', () => {
+  audioBar.classList.toggle('hidden');
+  audioToggle.textContent = audioBar.classList.contains('hidden') ? '🔊' : '🔇';
+});
+
+// Extract clean readable text from rendered content (no code, no emojis clutter)
+function getReadableText() {
+  const container = document.getElementById('content');
+  if (!container) return '';
+
+  let text = '';
+  // Walk all nodes, skip code blocks
+  container.querySelectorAll('h1,h2,h3,h4,p,li,td,blockquote').forEach(el => {
+    // Skip code blocks entirely
+    if (el.closest('pre') || el.closest('code')) return;
+    const t = el.innerText.replace(/[\u{1F300}-\u{1FFFF}]/gu, '').trim();
+    if (t) text += t + '. ';
+  });
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+// Play
+function ttsPlay() {
+  if (ttsPaused && synth.paused) {
+    synth.resume();
+    ttsPaused = false;
+    ttsPlaying = true;
+    playBtn.textContent = '⏸';
+    ttsLabel.innerHTML = '<strong>🔊 Reading...</strong> (click ⏸ to pause)';
+    return;
+  }
+
+  synth.cancel(); // clear any previous
+  const text = getReadableText();
+  if (!text) { ttsLabel.innerHTML = '<strong>Nothing to read</strong> yet — load a page first'; return; }
+
+  ttsUtterance = new SpeechSynthesisUtterance(text);
+  ttsUtterance.rate  = parseFloat(ttsSpeed.value);
+  ttsUtterance.pitch = 1;
+  ttsUtterance.lang  = 'en-US';
+
+  // Pick a nice voice if available
+  const voices = synth.getVoices();
+  const preferred = voices.find(v => v.name.includes('Google') && v.lang === 'en-US')
+                 || voices.find(v => v.lang === 'en-US')
+                 || voices[0];
+  if (preferred) ttsUtterance.voice = preferred;
+
+  ttsUtterance.onstart = () => {
+    ttsPlaying = true; ttsPaused = false;
+    playBtn.textContent = '⏸';
+    ttsLabel.innerHTML = `<strong>🔊 Reading</strong> ${currentDay.title || 'content'} at ${ttsSpeed.value}×`;
+  };
+
+  ttsUtterance.onend = () => {
+    ttsPlaying = false; ttsPaused = false;
+    playBtn.textContent = '▶';
+    ttsLabel.innerHTML = '<strong>✅ Done!</strong> Press ▶ to replay';
+  };
+
+  ttsUtterance.onerror = (e) => {
+    ttsLabel.innerHTML = `<strong>Error:</strong> ${e.error}`;
+    playBtn.textContent = '▶';
+  };
+
+  synth.speak(ttsUtterance);
+}
+
+// Pause
+function ttsPause() {
+  if (synth.speaking && !synth.paused) {
+    synth.pause();
+    ttsPaused = true; ttsPlaying = false;
+    playBtn.textContent = '▶';
+    ttsLabel.innerHTML = '<strong>⏸ Paused</strong> — click ▶ to continue';
+  }
+}
+
+// Stop
+function ttsStop() {
+  synth.cancel();
+  ttsPlaying = false; ttsPaused = false;
+  playBtn.textContent = '▶';
+  ttsLabel.innerHTML = '<strong>TTS</strong> Press ▶ to start reading';
+}
+
+// Play/Pause toggle
+playBtn.addEventListener('click', () => {
+  if (ttsPlaying)      ttsPause();
+  else                 ttsPlay();
+});
+
+stopBtn.addEventListener('click', ttsStop);
+
+// Speed change — restart with new speed
+ttsSpeed.addEventListener('change', () => {
+  if (ttsPlaying || ttsPaused) { ttsStop(); ttsPlay(); }
+});
+
+// Stop when navigating away
+window.addEventListener('beforeunload', () => synth.cancel());
+
+// Keyboard shortcut: Space = play/pause, Escape = stop
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.code === 'Space' && e.ctrlKey) { e.preventDefault(); ttsPlaying ? ttsPause() : ttsPlay(); }
+  if (e.code === 'Escape') ttsStop();
+});
 </script>
 </body>
 </html>
