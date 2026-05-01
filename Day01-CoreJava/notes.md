@@ -1,148 +1,422 @@
 # 📘 Day 1 — Core Java 8+ (May 2nd)
-
-> Each item below has the **question** + **answer**. Check it off once you understand it.
+> **Format:** Question → Detailed Answer → 🏭 Real-World Use → 💻 Code
 
 ---
 
 ## 🔷 JVM Internals
 
-- [ ] **What is JVM vs JRE vs JDK?** — JVM: runs `.class` bytecode on any OS. JRE: JVM + standard libraries (to *run* Java). JDK: JRE + compiler (`javac`) + tools (to *develop* Java).
+- [ ] **What is JVM vs JRE vs JDK?**
 
-- [ ] **What is bytecode?** — Platform-independent intermediate code compiled from `.java` by `javac`. The JVM interprets/JIT-compiles it to native machine code at runtime.
+  **JVM** (Java Virtual Machine) — Executes compiled `.class` bytecode. It's what makes Java "write once, run anywhere" — the same bytecode runs on Windows, Linux, Mac.
+  **JRE** (Java Runtime Environment) — JVM + Java standard libraries (`java.util`, `java.io` etc.). Needed to *run* Java apps.
+  **JDK** (Java Development Kit) — JRE + compiler (`javac`) + tools (debugger, jar, javadoc). Needed to *develop* Java apps.
 
-- [ ] **What are the JVM memory zones?** — **Heap**: all objects; **Stack**: one per thread, holds method frames & local vars; **Metaspace**: class metadata; **Code Cache**: JIT-compiled native code; **PC Register**: current instruction pointer per thread.
+  🏭 **Real World:** Your Spring Boot app is compiled into a `.jar` file by the JDK. On the production server (Docker container), only the JRE/JVM is needed to run it. That's why Docker images use `FROM eclipse-temurin:17-jre` (not `jdk`) to keep images smaller.
 
-- [ ] **What is Heap vs Stack?** — Heap: shared, stores objects, GC-managed, larger. Stack: per-thread, stores primitives & references, automatically freed when method returns, faster but smaller (StackOverflowError if too deep).
+---
 
-- [ ] **What is Garbage Collection?** — Automatic memory management. GC identifies objects with no references and frees their heap memory. You cannot explicitly free memory in Java (no `delete`).
+- [ ] **What are the JVM memory zones?**
 
-- [ ] **Name 4 GC algorithms and when to use each.** — **Serial GC**: single-thread, small apps. **Parallel GC**: multi-thread, max throughput. **G1 GC** (default Java 9+): balanced latency & throughput, region-based. **ZGC/Shenandoah**: ultra-low pause (<10ms), Java 15+, large heaps.
+  | Zone | What it stores | Managed by |
+  |---|---|---|
+  | **Heap** | All objects (`new Order()`, `new ArrayList()`) | Garbage Collector |
+  | **Stack** | One per thread. Method calls, local variables, primitives | Auto-freed when method returns |
+  | **Metaspace** | Class metadata (class names, methods, fields) | GC (since Java 8, replaced PermGen) |
+  | **Code Cache** | JIT-compiled native machine code | JVM |
+  | **PC Register** | Current instruction pointer for each thread | JVM |
 
-- [ ] **What is OutOfMemoryError vs StackOverflowError?** — OOM: Heap is full, no space for new objects. StackOverflow: thread's call stack is too deep (usually infinite recursion).
+  🏭 **Real World:** You get `OutOfMemoryError: Java heap space` when your Spring Boot app creates too many objects (e.g., loading 1 million DB records without pagination). Fix: add `@PageableDefault(size=20)` to your controller, or increase heap with `-Xmx512m`.
 
-- [ ] **What is a memory leak in Java?** — Objects are still referenced (so GC can't collect them) but never used again. Common cause: static collections holding objects, unclosed streams, cache without eviction.
+  You get `StackOverflowError` when you accidentally create infinite recursion — e.g., a `toString()` method that calls itself.
+
+---
+
+- [ ] **What is Garbage Collection? Name 4 GC types.**
+
+  GC automatically finds and frees memory for objects with **no references**. You don't `delete` in Java — GC does it.
+
+  | GC | Best For | How |
+  |---|---|---|
+  | **Serial GC** | Small apps, single-core | Single thread, stop-the-world |
+  | **Parallel GC** | Batch processing, max throughput | Multiple threads, stop-the-world |
+  | **G1 GC** (Java 9+ default) | Web apps (balanced) | Divides heap into regions, concurrent |
+  | **ZGC / Shenandoah** | Low-latency APIs (<10ms pause) | Concurrent compaction |
+
+  🏭 **Real World:** For your Accenture Spring Boot microservice handling REST APIs, G1 GC is fine. If it were a real-time trading platform needing sub-millisecond response, you'd use ZGC with `-XX:+UseZGC`.
 
 ---
 
 ## 🔷 Core Language
 
-- [ ] **Difference between primitive types and reference types?** — Primitives (`int`, `boolean`, `char` etc.) store values directly on the stack. Reference types store a *pointer* to the object on the heap. Primitives have wrapper classes (`Integer`, `Boolean`).
+- [ ] **Why is String immutable? What does this give us?**
 
-- [ ] **What are all 8 primitive types?** — `byte`(1B), `short`(2B), `int`(4B), `long`(8B), `float`(4B), `double`(8B), `char`(2B), `boolean`(1bit).
+  Once a `String` is created, its value **cannot be changed**. Any operation like `str + "hello"` creates a **new** String object, not modify the existing one.
 
-- [ ] **What is autoboxing and unboxing? Pitfalls?** — Autoboxing: auto-converting `int` → `Integer`. Unboxing: `Integer` → `int`. Pitfall: `Integer a = null; int b = a;` throws NullPointerException. Also causes performance overhead in loops.
+  **Benefits:**
+  1. **Thread-safe** — Multiple threads can share the same String without synchronization
+  2. **String Pool** — JVM can cache String literals and reuse them (saves memory)
+  3. **Stable HashMap keys** — hashCode is cached and never changes
+  4. **Security** — Database passwords passed as String can't be modified by malicious code mid-flight
 
-- [ ] **`==` vs `.equals()`?** — `==` compares **references** (memory addresses). `.equals()` compares **values**. For Strings always use `.equals()`. Example: `new String("hi") == new String("hi")` is `false`.
+  🏭 **Real World:** In Spring Boot, configuration values (`@Value("${db.url}")`) are Strings. They're safely shared across all threads handling concurrent HTTP requests without locks.
 
-- [ ] **What is `hashCode()` and its contract with `equals()`?** — If `a.equals(b)` is true, then `a.hashCode() == b.hashCode()` MUST be true. Used by HashMap to find the right bucket. Always override both together.
+  ```java
+  // ❌ This creates 1000 new String objects in memory!
+  String result = "";
+  for (int i = 0; i < 1000; i++) result += i;
 
-- [ ] **Why is String immutable?** — Thread-safe (no synchronization needed for sharing), String Pool efficiency (can cache literals), security (can't modify after passing to methods), hashCode caching (stable key for HashMap).
+  // ✅ Use StringBuilder — mutable, single object
+  StringBuilder sb = new StringBuilder();
+  for (int i = 0; i < 1000; i++) sb.append(i);
+  String result = sb.toString();
+  ```
 
-- [ ] **What is the String Pool?** — A cache in the Heap for String literals. `String a = "hello"` reuses the pooled object. `new String("hello")` always creates a new object bypassing the pool. `intern()` puts a string into the pool.
+---
 
-- [ ] **String vs StringBuilder vs StringBuffer?** — `String`: immutable, creates new object on every concat. `StringBuilder`: mutable, not thread-safe, fast (use in single-thread loops). `StringBuffer`: mutable, thread-safe (synchronized), slower.
+- [ ] **What is `==` vs `.equals()`?**
 
-- [ ] **What is `final`, `finally`, `finalize`?** — `final`: prevents re-assignment (variable), overriding (method), inheritance (class). `finally`: block that always runs after try-catch. `finalize()`: deprecated GC hook called before object is collected — do NOT rely on it.
+  `==` compares **memory addresses** (are these the same object in RAM?).
+  `.equals()` compares **values** (do these objects represent the same thing?).
 
-- [ ] **`abstract` class vs `interface`?** — Abstract class: can have state, constructors, concrete methods; use when classes share common implementation. Interface: all-abstract by default, supports multiple inheritance; use to define a contract. From Java 8: interfaces can have `default` and `static` methods.
+  ```java
+  String a = new String("hello");
+  String b = new String("hello");
+  
+  System.out.println(a == b);        // false — different objects in heap
+  System.out.println(a.equals(b));   // true  — same characters
+  
+  // String pool example:
+  String c = "hello";
+  String d = "hello";
+  System.out.println(c == d);        // true! — both point to same pool object
+  ```
 
-- [ ] **Checked vs Unchecked exceptions?** — Checked: must be handled or declared (`IOException`, `SQLException`), signals recoverable conditions. Unchecked: extend `RuntimeException`, don't need to be declared (`NullPointerException`, `IllegalArgumentException`), signal programming errors.
+  🏭 **Real World:** Classic Spring Boot bug — comparing status strings in a service:
+  ```java
+  // ❌ WRONG — will work sometimes (pool), fail other times (new object from DB)
+  if (order.getStatus() == "COMPLETED") { ... }
 
-- [ ] **What is try-with-resources?** — Ensures `AutoCloseable` resources (streams, connections) are closed automatically. `try (FileReader fr = new FileReader(f)) { ... }` — `fr.close()` is called even if exception occurs.
+  // ✅ CORRECT — always works
+  if ("COMPLETED".equals(order.getStatus())) { ... }
+  // Note: put literal first to avoid NPE if status is null
+  ```
+
+---
+
+- [ ] **What is `final`, `finally`, `finalize`? (Classic trap question!)**
+
+  **`final`** — Prevents change:
+  - `final int x = 5;` → can't reassign x
+  - `final void process()` → can't override in subclass
+  - `final class String` → can't extend String (that's why String is immutable!)
+
+  **`finally`** — Block that **always runs** after try-catch, even if exception thrown or `return` called. Used for cleanup.
+
+  **`finalize()`** — Deprecated! GC called this before deleting an object. **Never rely on it** — GC timing is unpredictable.
+
+  ```java
+  // finally always runs — used for guaranteed cleanup
+  Connection conn = null;
+  try {
+      conn = dataSource.getConnection();
+      // do DB work
+  } catch (SQLException e) {
+      log.error("DB error", e);
+  } finally {
+      if (conn != null) conn.close(); // always closes, even if exception
+  }
+
+  // Modern way: try-with-resources (preferred in Spring Boot)
+  try (Connection conn = dataSource.getConnection()) {
+      // conn.close() called automatically
+  }
+  ```
+
+  🏭 **Real World:** Spring's `JdbcTemplate` uses try-finally internally to guarantee DB connections are returned to the pool (HikariCP). You never have to manage it manually in Spring.
+
+---
+
+- [ ] **`abstract` class vs `interface` — when to use each?**
+
+  | | Abstract Class | Interface |
+  |---|---|---|
+  | Can have state (fields) | ✅ Yes | ❌ No (only constants) |
+  | Can have constructors | ✅ Yes | ❌ No |
+  | Multiple inheritance | ❌ One only | ✅ Multiple |
+  | Default methods (Java 8+) | ✅ Yes | ✅ Yes |
+  | Best for | Shared implementation | Defining a contract |
+
+  🏭 **Real World in Spring Boot:**
+
+  ```java
+  // Interface — defines WHAT (contract), not HOW
+  public interface PaymentService {
+      PaymentResult process(PaymentRequest request);
+  }
+
+  // Implementations — different HOW for same WHAT
+  @Service("stripe")
+  public class StripePaymentService implements PaymentService { ... }
+
+  @Service("razorpay")
+  public class RazorpayPaymentService implements PaymentService { ... }
+
+  // Abstract class — shared logic between related classes
+  public abstract class BaseNotificationService {
+      private final EmailClient emailClient;  // shared state
+      
+      protected abstract String buildMessage(Event event); // each subclass implements
+      
+      public void notify(Event event) {
+          emailClient.send(buildMessage(event)); // shared implementation
+      }
+  }
+  ```
 
 ---
 
 ## 🔷 Java 8+ Features
 
-- [ ] **What is a Lambda expression?** — Anonymous function: `(params) -> body`. Enables passing behaviour as data. Example: `list.sort((a, b) -> a.compareTo(b))`. Replaces anonymous inner classes for single-method interfaces.
+- [ ] **What is the Stream API? What are intermediate vs terminal operations?**
 
-- [ ] **What is a Functional Interface?** — Interface with exactly ONE abstract method (annotated `@FunctionalInterface`). The 4 key built-ins: `Function<T,R>` (transform), `Predicate<T>` (test/filter), `Consumer<T>` (side-effect/no return), `Supplier<T>` (produce/no input).
+  Streams let you process collections **declaratively** (what to do) vs **imperatively** (how to do it). They're lazy — no work happens until a terminal operation is called.
 
-- [ ] **What is a Method Reference?** — Shorthand for a lambda that calls an existing method. 4 types: `String::toUpperCase` (instance method), `System.out::println` (specific instance), `String::new` (constructor), `Integer::parseInt` (static method).
+  **Intermediate** (lazy, returns Stream): `filter()`, `map()`, `flatMap()`, `sorted()`, `distinct()`, `limit()`, `peek()`
+  **Terminal** (triggers execution): `collect()`, `forEach()`, `reduce()`, `count()`, `findFirst()`, `anyMatch()`, `min()`, `max()`
 
-- [ ] **What is `Optional<T>`?** — A container that may or may not hold a value. Prevents NPE by forcing callers to handle the empty case. Key methods: `of()`, `ofNullable()`, `isPresent()`, `orElse()`, `orElseGet()`, `map()`, `flatMap()`, `ifPresent()`.
+  ```java
+  // Real Spring Boot scenario: Process orders from DB
+  List<Order> orders = orderRepository.findAll();
 
-- [ ] **Stream API: intermediate vs terminal operations?** — Intermediate: lazy, return a new Stream (`filter`, `map`, `flatMap`, `sorted`, `distinct`, `limit`). Terminal: trigger execution, return result (`collect`, `forEach`, `reduce`, `count`, `findFirst`, `anyMatch`).
+  // Get top 5 completed orders above ₹500, sorted by amount desc
+  List<OrderDTO> result = orders.stream()
+      .filter(o -> "COMPLETED".equals(o.getStatus()))      // intermediate
+      .filter(o -> o.getAmount() > 500)                    // intermediate
+      .sorted(Comparator.comparingDouble(Order::getAmount).reversed()) // intermediate
+      .limit(5)                                             // intermediate
+      .map(o -> new OrderDTO(o.getId(), o.getAmount()))    // intermediate
+      .collect(Collectors.toList());                        // TERMINAL — executes everything
+  ```
 
-- [ ] **`flatMap()` vs `map()`?** — `map()` transforms each element (1-to-1). `flatMap()` transforms each element to a Stream and flattens all streams into one (1-to-many). Use `flatMap` to flatten `List<List<T>>` to `List<T>`.
+  🏭 **Real World:** In your Accenture project, instead of writing 3 for-loops to filter/transform/sort a list from the DB, one stream chain does it all. Interviewers love asking you to replace a nested for-loop with streams.
 
-- [ ] **`Collectors.groupingBy()` example?** — `orders.stream().collect(Collectors.groupingBy(Order::getStatus))` → `Map<String, List<Order>>`. With downstream: `groupingBy(Order::getStatus, Collectors.counting())` → `Map<String, Long>`.
+---
 
-- [ ] **`Stream` vs `ParallelStream`?** — `parallelStream()` splits data across multiple CPU cores using ForkJoinPool. Fast for large datasets with CPU-intensive ops, BUT ordering is not guaranteed and has overhead for small datasets. Use carefully.
+- [ ] **`map()` vs `flatMap()` — what's the difference?**
 
-- [ ] **What is `CompletableFuture`?** — Non-blocking async programming. `supplyAsync()` runs in background. `thenApply()` transforms result. `thenCompose()` chains another async call. `allOf()` waits for multiple. `exceptionally()` handles errors. Unlike `Future.get()`, it doesn't block.
+  `map()` → one input produces **one output** (1:1 transformation)
+  `flatMap()` → one input produces **many outputs** which are flattened into one stream (1:N, then flatten)
+
+  ```java
+  // map() — transform each order to its ID (1:1)
+  List<Long> orderIds = orders.stream()
+      .map(Order::getId)
+      .collect(Collectors.toList());
+
+  // flatMap() — each order has multiple items, get ALL items from ALL orders (1:N)
+  List<OrderItem> allItems = orders.stream()
+      .flatMap(order -> order.getItems().stream()) // each order → many items
+      .collect(Collectors.toList());
+
+  // Another example: split sentences into words
+  List<String> sentences = List.of("Hello World", "Java Streams");
+  List<String> words = sentences.stream()
+      .flatMap(s -> Arrays.stream(s.split(" ")))
+      .collect(Collectors.toList());
+  // Result: ["Hello", "World", "Java", "Streams"]
+  ```
+
+---
+
+- [ ] **`Collectors.groupingBy()` — how does it work?**
+
+  Groups stream elements into a `Map` by a classifier function. Most useful for analytics/reporting.
+
+  ```java
+  // Basic: group orders by status
+  Map<String, List<Order>> byStatus = orders.stream()
+      .collect(Collectors.groupingBy(Order::getStatus));
+  // {"PENDING": [order1, order3], "COMPLETED": [order2, order4]}
+
+  // Count per status
+  Map<String, Long> countByStatus = orders.stream()
+      .collect(Collectors.groupingBy(Order::getStatus, Collectors.counting()));
+  // {"PENDING": 2, "COMPLETED": 2}
+
+  // Sum of amount per customer
+  Map<Long, Double> totalByCustomer = orders.stream()
+      .collect(Collectors.groupingBy(
+          Order::getCustomerId,
+          Collectors.summingDouble(Order::getAmount)
+      ));
+  ```
+
+  🏭 **Real World:** Building a dashboard endpoint that shows order stats per status, or calculating total revenue per customer — both done with `groupingBy` instead of writing SQL aggregate queries for every variation.
+
+---
+
+- [ ] **What is `CompletableFuture`? When do you use it?**
+
+  Makes async programming readable. Unlike `Future.get()` which **blocks** the thread, `CompletableFuture` lets you define what to do *when* the result arrives, without blocking.
+
+  ```java
+  // PROBLEM: Call 3 external APIs. Sequentially = 900ms total
+  UserProfile user = userApi.getUser(id);      // 300ms
+  List<Order> orders = orderApi.getOrders(id); // 300ms
+  CreditScore credit = creditApi.getScore(id); // 300ms
+
+  // SOLUTION: Call all 3 in parallel = ~300ms total
+  CompletableFuture<UserProfile> userFuture =
+      CompletableFuture.supplyAsync(() -> userApi.getUser(id));
+  
+  CompletableFuture<List<Order>> ordersFuture =
+      CompletableFuture.supplyAsync(() -> orderApi.getOrders(id));
+  
+  CompletableFuture<CreditScore> creditFuture =
+      CompletableFuture.supplyAsync(() -> creditApi.getScore(id));
+
+  // Wait for all 3 to complete
+  CompletableFuture.allOf(userFuture, ordersFuture, creditFuture).join();
+
+  UserProfile user = userFuture.get();
+  List<Order> orders = ordersFuture.get();
+
+  // Chain operations:
+  CompletableFuture.supplyAsync(() -> fetchOrder(id))
+      .thenApply(order -> applyDiscount(order))   // transform result
+      .thenApply(order -> toDTO(order))
+      .exceptionally(ex -> OrderDTO.empty())       // fallback on error
+      .thenAccept(dto -> log.info("Done: {}", dto));
+  ```
+
+  🏭 **Real World:** Any Spring Boot microservice that needs to call multiple downstream services (User service + Inventory service + Payment service) should call them in parallel using `CompletableFuture` to reduce API response time.
 
 ---
 
 ## 🔷 Collections Deep Dive
 
-- [ ] **`ArrayList` vs `LinkedList`?** — ArrayList: backed by array, O(1) get-by-index, O(n) insert-in-middle. LinkedList: doubly-linked list, O(n) get-by-index, O(1) insert/remove at ends. **Use ArrayList by default** (better cache performance).
+- [ ] **How does `HashMap` work internally?**
 
-- [ ] **`HashMap` internals — how does `put()` work?** — 1) Compute `key.hashCode()`. 2) Apply hash function → bucket index. 3) If bucket empty, insert. 4) If collision, check `.equals()` — update if key exists, else append to linked list (TreeMap if >8 entries in Java 8+).
+  `HashMap` is a **array of linked lists** (or trees in Java 8+).
 
-- [ ] **HashMap default capacity (16) and load factor (0.75)?** — When `size > capacity × 0.75` (i.e., 12 entries), HashMap **rehashes**: doubles capacity, recomputes all bucket indexes. This is expensive — set initial capacity if you know the size.
+  **How `put("key", value)` works:**
+  1. Compute `"key".hashCode()` → e.g., 1234567
+  2. `bucketIndex = hashCode % arrayLength` (e.g., 1234567 % 16 = 7)
+  3. Go to bucket[7]:
+     - **Empty?** → Insert directly
+     - **Has entries?** → Walk the list, check `.equals()`. Update if key exists, append if new
+  4. If bucket list grows > 8 entries → convert to **Red-Black Tree** (O(log n) instead of O(n))
+  5. If total entries > `capacity × 0.75` (load factor) → **resize to double** (expensive rehash!)
 
-- [ ] **`HashMap` vs `Hashtable` vs `ConcurrentHashMap`?** — HashMap: not thread-safe, allows null keys/values. Hashtable: synchronized (whole map), legacy. ConcurrentHashMap: thread-safe via CAS + segment locks (no null keys/values), best for concurrent use.
+  ```java
+  Map<String, Order> cache = new HashMap<>(1000); // pre-size if you know approximate count
+  cache.put("order-123", order);
+  Order o = cache.get("order-123"); // O(1) average
 
-- [ ] **`Comparable` vs `Comparator`?** — `Comparable`: implemented by the class itself (`compareTo`), defines natural ordering. `Comparator`: external, defines custom ordering. `Collections.sort(list, comparator)`. Java 8+: `Comparator.comparing(Employee::getSalary).reversed()`.
+  // GOTCHA: custom objects as keys MUST override both hashCode AND equals
+  public class OrderKey {
+      private Long id;
+      
+      @Override
+      public int hashCode() { return Objects.hash(id); }
+      
+      @Override
+      public boolean equals(Object o) {
+          if (!(o instanceof OrderKey)) return false;
+          return this.id.equals(((OrderKey)o).id);
+      }
+  }
+  ```
 
-- [ ] **What is `PriorityQueue`?** — Min-heap by default (smallest element at head). Use `Collections.reverseOrder()` for max-heap. `add()` is O(log n), `poll()` (remove head) is O(log n), `peek()` is O(1). Elements must be `Comparable` or pass a `Comparator`.
+  🏭 **Real World:** Redis is essentially a distributed HashMap. Spring's `@Cacheable` stores method results in an in-memory HashMap (or Redis). Understanding HashMap internals helps you understand why cache keys need proper `hashCode`/`equals`.
+
+---
+
+- [ ] **`HashMap` vs `ConcurrentHashMap` — which to use when?**
+
+  `HashMap` — **not thread-safe**. Two threads writing simultaneously can corrupt the map (data loss, infinite loop during resize in Java 7!).
+
+  `ConcurrentHashMap` — **thread-safe without locking the entire map**. Uses CAS (Compare-And-Swap) operations and locks only the individual bucket being written to. Much better throughput than synchronized `Hashtable`.
+
+  ```java
+  // WRONG for multi-threaded Spring Bean (singleton scope!)
+  @Service
+  public class ProductCacheService {
+      private Map<Long, Product> cache = new HashMap<>(); // ❌ Not thread-safe!
+      
+      public Product getProduct(Long id) {
+          return cache.get(id); // concurrent reads+writes = data corruption
+      }
+  }
+
+  // CORRECT
+  @Service
+  public class ProductCacheService {
+      private Map<Long, Product> cache = new ConcurrentHashMap<>(); // ✅
+      // OR better: use Spring's @Cacheable with Redis
+  }
+  ```
+
+  🏭 **Real World:** Spring Boot singleton beans are shared across all threads (one bean, many HTTP requests). Any mutable state in a singleton (like a cache map) **must** use `ConcurrentHashMap` or be managed by Spring's cache abstraction.
 
 ---
 
 ## 🔷 Multithreading & Concurrency
 
-- [ ] **Thread lifecycle states?** — NEW (created, not started) → RUNNABLE (running or ready) → BLOCKED (waiting for monitor lock) → WAITING (indefinitely waiting: `wait()`, `join()`) → TIMED_WAITING (`sleep(ms)`, `wait(ms)`) → TERMINATED.
+- [ ] **What is `volatile` and when is it not enough?**
 
-- [ ] **`synchronized` keyword?** — Ensures only one thread executes the block/method at a time by acquiring the object's monitor lock. Method-level: `synchronized void foo()`. Block-level: `synchronized(this) { ... }` (more granular, preferred).
+  CPUs have **local caches** per thread. Thread A writes `running = false`, but Thread B may still read the old cached `true`. `volatile` forces reads/writes to go to **main memory**, ensuring all threads see the latest value.
 
-- [ ] **`volatile` keyword?** — Guarantees **visibility**: reads/writes go directly to main memory, not thread's local cache. Does NOT guarantee atomicity. Use for simple flags: `volatile boolean running = true`. For compound operations, use `AtomicInteger` or `synchronized`.
+  BUT `volatile` only guarantees **visibility**, NOT **atomicity**. `counter++` is 3 operations (read, increment, write) and `volatile` doesn't make those 3 atomic together.
 
-- [ ] **What is a deadlock?** — Thread A holds Lock 1, waits for Lock 2. Thread B holds Lock 2, waits for Lock 1. Both wait forever. Prevention: always acquire locks in the **same order**, use `tryLock()` with timeout.
+  ```java
+  // ✅ volatile is enough for a simple flag
+  private volatile boolean running = true;
 
-- [ ] **`ExecutorService` — thread pool types?** — `newFixedThreadPool(n)`: fixed n threads. `newCachedThreadPool()`: grows/shrinks dynamically (careful with unbounded growth). `newSingleThreadExecutor()`: single thread, sequential. `newScheduledThreadPool(n)`: for delayed/periodic tasks.
+  public void stop() { running = false; }              // Thread A
+  public void run() { while (running) { doWork(); } }  // Thread B sees update immediately
 
-- [ ] **`AtomicInteger` vs `synchronized`?** — `AtomicInteger` uses CAS (Compare-And-Swap) CPU instruction — lock-free, faster under low contention. `synchronized` uses OS-level mutex — better when holding lock for long operations or protecting complex state.
+  // ❌ volatile NOT enough for increment
+  private volatile int counter = 0;
+  counter++; // still a race condition! read(0), read(0), write(1), write(1) = lost update
 
-- [ ] **`CountDownLatch` vs `CyclicBarrier`?** — `CountDownLatch`: one-time latch, N threads count down, main thread waits at `await()`. **Cannot be reset**. `CyclicBarrier`: all N threads wait at `await()` until all arrive, then all proceed together. **Reusable**.
+  // ✅ Use AtomicInteger for counters
+  private AtomicInteger counter = new AtomicInteger(0);
+  counter.incrementAndGet(); // single atomic CPU instruction (CAS)
+  ```
 
-- [ ] **What is `ThreadLocal`?** — Provides each thread its own isolated copy of a variable. Common use: storing `HttpServletRequest` or DB connections per-thread. Risk: memory leaks in thread pools (always `remove()` after use).
+  🏭 **Real World:** In a Spring Boot app, you might have a `volatile boolean` flag to indicate the application is shutting down. For request counting or rate limiting, use `AtomicInteger` or `AtomicLong`.
 
 ---
 
-## 📝 Key Code to Write from Memory
+- [ ] **What is `ExecutorService`? Why not use raw threads?**
 
-```java
-// Streams: group orders by status and count
-Map<String, Long> countByStatus = orders.stream()
-    .collect(Collectors.groupingBy(Order::getStatus, Collectors.counting()));
+  Creating raw threads is expensive (allocates OS thread, ~1MB stack). `ExecutorService` manages a **thread pool** — reuses threads instead of creating new ones.
 
-// CompletableFuture: chain async calls with fallback
-CompletableFuture.supplyAsync(() -> fetchUser(id))
-    .thenApply(user -> enrichWithOrders(user))
-    .exceptionally(ex -> User.guest())
-    .thenAccept(System.out::println);
+  ```java
+  // ❌ Raw thread — creates new OS thread for every task (expensive)
+  new Thread(() -> processOrder(order)).start();
 
-// Custom Comparator: salary desc, then name asc
-employees.sort(Comparator.comparingDouble(Employee::getSalary)
-    .reversed().thenComparing(Employee::getName));
+  // ✅ Thread pool — reuses threads
+  ExecutorService pool = Executors.newFixedThreadPool(10); // 10 worker threads
 
-// AtomicInteger: thread-safe counter (no synchronized)
-AtomicInteger counter = new AtomicInteger(0);
-int current = counter.incrementAndGet();  // returns new value
+  // Submit tasks to the pool
+  Future<OrderResult> future = pool.submit(() -> processOrder(order));
+  OrderResult result = future.get(); // blocks until done
 
-// Optional: safe chain
-String city = Optional.ofNullable(user)
-    .map(User::getAddress)
-    .map(Address::getCity)
-    .orElse("Unknown");
-```
+  // In Spring Boot — use @Async instead (Spring manages the pool)
+  @Async("taskExecutor")
+  public CompletableFuture<OrderResult> processOrderAsync(Order order) {
+      return CompletableFuture.completedFuture(processOrder(order));
+  }
+  ```
+
+  🏭 **Real World:** Sending email notifications after an order is placed. Instead of blocking the HTTP response thread for 2 seconds while the email sends, use `@Async` to fire-and-forget. The API returns `200 OK` immediately, email sends in the background.
 
 ---
 
 ## 🔗 Study References
-- [enhorse/java-interview — OOP](https://github.com/enhorse/java-interview/blob/master/oop.md)
-- [enhorse/java-interview — Collections](https://github.com/enhorse/java-interview/blob/master/collections.md)
-- [enhorse/java-interview — Multithreading](https://github.com/enhorse/java-interview/blob/master/multithreading.md)
-- [Baeldung — Java 8 Streams](https://www.baeldung.com/java-8-streams)
-- [Baeldung — CompletableFuture](https://www.baeldung.com/java-completablefuture)
+- [enhorse/java-interview — Full Java Q&A](https://github.com/enhorse/java-interview)
+- [Baeldung — Java 8 Streams Guide](https://www.baeldung.com/java-8-streams)
+- [Baeldung — Guide to CompletableFuture](https://www.baeldung.com/java-completablefuture)
+- [Baeldung — Java HashMap](https://www.baeldung.com/java-hashmap)

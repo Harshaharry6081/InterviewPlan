@@ -208,23 +208,31 @@ const DAYS = [
 // ── Get current file from URL ──
 const params  = new URLSearchParams(window.location.search);
 const fileParam = params.get('file');
+const titleParam = params.get('title') ? decodeURIComponent(params.get('title')) : null;
 const currentIdx = DAYS.findIndex(d => d.file === fileParam);
-const currentDay = DAYS[currentIdx] || DAYS[0];
+const currentDay = DAYS[currentIdx] || { day: '📁', label: 'Resource', title: titleParam || 'Resource', file: fileParam };
 
 // ── Update nav ──
-document.getElementById('nav-day-badge').textContent = currentDay.label;
-document.getElementById('nav-title').textContent      = currentDay.title;
-document.title = `${currentDay.label} — ${currentDay.title}`;
+document.getElementById('nav-day-badge').textContent = currentDay.label || '📁 Resource';
+document.getElementById('nav-title').textContent      = currentDay.title || titleParam || 'Resource';
+document.title = `${currentDay.title || titleParam || 'Resource'} — Interview Prep`;
 
-// Prev / Next buttons
+// Prev / Next buttons — only show for actual day files
 const prevDay = DAYS[currentIdx - 1];
 const nextDay = DAYS[currentIdx + 1];
 const prevBtn = document.getElementById('prev-btn');
 const nextBtn = document.getElementById('next-btn');
-prevBtn.href = prevDay ? `day.html?file=${prevDay.file}` : 'index.html';
-prevBtn.textContent = prevDay ? `← ${prevDay.label}` : '← Home';
-nextBtn.href = nextDay ? `day.html?file=${nextDay.file}` : 'index.html';
-nextBtn.textContent = nextDay ? `${nextDay.label} →` : 'Home →';
+if (currentIdx === -1) {
+  // Resource page — hide nav buttons and progress bar
+  prevBtn.style.display = 'none';
+  nextBtn.style.display = 'none';
+  document.querySelector('.day-progress').style.display = 'none';
+} else {
+  prevBtn.href = prevDay ? `day.html?file=${prevDay.file}` : 'index.html';
+  prevBtn.textContent = prevDay ? `← ${prevDay.label}` : '← Home';
+  nextBtn.href = nextDay ? `day.html?file=${nextDay.file}` : 'index.html';
+  nextBtn.textContent = nextDay ? `${nextDay.label} →` : 'Home →';
+}
 
 // ── LocalStorage keys ──
 const STORAGE_KEY = `day_checks_${currentDay.day}`;

@@ -109,15 +109,25 @@
                      border-radius:100px; transition:width 1s cubic-bezier(.4,0,.2,1); width:0%; }
 
     /* ── Resources Grid ── */
-    .resources-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; margin-bottom:48px; }
-    .res-card {
-      background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-      padding:18px; text-decoration:none; color:var(--text); transition:all .2s; display:block;
+    .resources-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 48px;
     }
-    .res-card:hover { border-color:var(--accent2); transform:translateY(-2px); }
-    .res-icon { font-size:24px; margin-bottom:10px; }
-    .res-title { font-size:.95rem; font-weight:600; margin-bottom:6px; }
-    .res-desc { font-size:12px; color:var(--muted); line-height:1.5; }
+    @media (max-width: 700px) { .resources-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .resources-grid { grid-template-columns: 1fr; } }
+    .res-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; text-decoration: none; color: var(--text); transition: all .2s; display: flex;
+      flex-direction: column; gap: 8px;
+    }
+    .res-card:hover { border-color: var(--accent2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(34,211,238,0.1); }
+    .res-icon { font-size: 26px; }
+    .res-title { font-size: .95rem; font-weight: 700; color: var(--text); }
+    .res-desc { font-size: 12px; color: var(--muted); line-height: 1.6; flex: 1; }
+    .res-badge { font-size: 10px; padding: 2px 8px; border-radius: 100px; width: fit-content;
+      background: rgba(34,211,238,0.1); color: var(--accent2); border: 1px solid rgba(34,211,238,0.2); margin-top: auto; }
 
     /* ── Footer ── */
     footer { text-align:center; padding:30px 20px; color:var(--muted); font-size:13px; border-top:1px solid var(--border); }
@@ -171,35 +181,41 @@
   <!-- Resources -->
   <div class="section-title">📁 Resources & Files</div>
   <div class="resources-grid">
-    <a class="res-card" href="resources/cheatsheets/quick-reference.md">
+    <a class="res-card" href="day.html?file=resources/cheatsheets/quick-reference.md&title=Quick+Reference+Cheatsheet">
       <div class="res-icon">⚡</div>
       <div class="res-title">Quick Reference Cheatsheet</div>
-      <div class="res-desc">All Spring annotations, Docker, kubectl, Redis & Kafka commands in one place.</div>
+      <div class="res-desc">All Spring annotations, Docker, kubectl, Redis & Kafka commands in one place for fast revision.</div>
+      <span class="res-badge">📄 Local File</span>
     </a>
-    <a class="res-card" href="resources/code-examples/01-java-coding-problems.md">
+    <a class="res-card" href="day.html?file=resources/code-examples/01-java-coding-problems.md&title=Java+Coding+Problems">
       <div class="res-icon">💻</div>
       <div class="res-title">Java Coding Problems</div>
-      <div class="res-desc">14 problems: Arrays, Strings, Streams, Linked Lists, FizzBuzz with solutions.</div>
+      <div class="res-desc">14 problems with solutions: Two Sum, Streams, Linked Lists, FizzBuzz, Sliding Window.</div>
+      <span class="res-badge">📄 Local File</span>
     </a>
-    <a class="res-card" href="resources/code-examples/02-springboot-coding-problems.md">
+    <a class="res-card" href="day.html?file=resources/code-examples/02-springboot-coding-problems.md&title=Spring+Boot+Coding+Problems">
       <div class="res-icon">🌱</div>
       <div class="res-title">Spring Boot Coding</div>
-      <div class="res-desc">CRUD API from scratch, N+1 fix, Rate Limiter, Retry with Backoff, Thread-Safe Counter.</div>
+      <div class="res-desc">CRUD REST API from scratch, N+1 fix, Rate Limiter (Redis), Retry with Backoff, Thread-Safe Counter.</div>
+      <span class="res-badge">📄 Local File</span>
     </a>
-    <a class="res-card" href="resources/interview-questions/top-50-qa.md">
+    <a class="res-card" href="day.html?file=resources/interview-questions/top-50-qa.md&title=Top+50+Interview+Q%26A">
       <div class="res-icon">❓</div>
       <div class="res-title">Top 50 Interview Q&amp;A</div>
-      <div class="res-desc">Java Core, Spring Boot, Microservices, DB, Kafka, K8s, Behavioral — all answered.</div>
+      <div class="res-desc">50 answered questions: Java Core, Spring Boot, Microservices, DB, Kafka, K8s, and Behavioral.</div>
+      <span class="res-badge">📄 Local File</span>
     </a>
     <a class="res-card" href="https://github.com/enhorse/java-interview" target="_blank">
       <div class="res-icon">🔗</div>
-      <div class="res-title">Java Interview Repo</div>
-      <div class="res-desc">Comprehensive Java interview questions from enhorse/java-interview on GitHub.</div>
+      <div class="res-title">Java Interview Repo ↗</div>
+      <div class="res-desc">Comprehensive Java Q&A covering JVM, OOP, Collections, Multithreading, Spring and more.</div>
+      <span class="res-badge">⭐ GitHub</span>
     </a>
     <a class="res-card" href="https://github.com/ashishps1/awesome-low-level-design" target="_blank">
       <div class="res-icon">🏗️</div>
-      <div class="res-title">Awesome LLD Patterns</div>
-      <div class="res-desc">Low Level Design patterns and system design examples from ashishps1.</div>
+      <div class="res-title">Awesome LLD Patterns ↗</div>
+      <div class="res-desc">Low Level Design problems: Parking Lot, BookMyShow, ATM, Chess, all 13 design patterns with code.</div>
+      <span class="res-badge">⭐ GitHub</span>
     </a>
   </div>
 
