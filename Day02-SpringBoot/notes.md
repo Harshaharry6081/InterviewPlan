@@ -1,215 +1,352 @@
-# 📘 Day 2 – Spring Boot (May 3rd)
-
-> **Goal:** Understand the full lifecycle of a Spring Boot app — from startup to request handling.
-
----
-
-## ✅ Checklist
-- [ ] IoC & Dependency Injection
-- [ ] Bean Lifecycle & Scopes
-- [ ] Spring Boot Auto-configuration
-- [ ] Spring Data JPA (Repositories, Transactions)
-- [ ] Spring Security basics (JWT)
-- [ ] Profiles & application.yml
+# 📘 Day 2 — Spring Boot (May 3rd)
+> **Format:** Question → Detailed Answer → 🏭 Real-World Use → 💻 Code
 
 ---
 
-## 1. IoC & Dependency Injection
+## 🔷 Spring Core — IoC & Dependency Injection
 
-**Inversion of Control (IoC):** Instead of you creating objects (`new Service()`), Spring creates and manages them.
+- [ ] **What is Inversion of Control (IoC)?**
 
-**Three types of Dependency Injection:**
-```java
-// 1. Constructor Injection (RECOMMENDED)
-@Service
-public class OrderService {
-    private final OrderRepository repo;
+  Normally *your code* creates objects: `OrderService service = new OrderService(new OrderRepository())`. IoC flips this — the **Spring container** creates and wires objects for you. You just declare what you need.
 
-    @Autowired  // optional in newer Spring versions if single constructor
-    public OrderService(OrderRepository repo) {
-        this.repo = repo;
-    }
-}
+  This means your classes don't know *how* their dependencies are created — they just receive them. This makes swapping implementations (e.g., real DB vs mock) trivial for testing.
 
-// 2. Field Injection (NOT recommended - hides dependencies)
-@Service
-public class OrderService {
-    @Autowired
-    private OrderRepository repo;
-}
-
-// 3. Setter Injection (use for optional dependencies)
-@Service
-public class OrderService {
-    private OrderRepository repo;
-
-    @Autowired
-    public void setRepo(OrderRepository repo) {
-        this.repo = repo;
-    }
-}
-```
+  🏭 **Real World:** In your Accenture Spring Boot microservice, you never write `new` for service or repository classes. Spring creates them as singletons, injects them wherever needed, and manages their lifecycle. This is why Spring apps are so testable — you can inject mock dependencies in unit tests.
 
 ---
 
-## 2. Bean Scopes
+- [ ] **What are the 3 types of Dependency Injection? Which is best?**
 
-| Scope | Description |
-|---|---|
-| `singleton` | **Default.** One instance per Spring context |
-| `prototype` | New instance every time it's requested |
-| `request` | One instance per HTTP request (Web apps) |
-| `session` | One instance per HTTP session (Web apps) |
+  ```java
+  // 1. ❌ Field Injection — most common but WORST
+  @Service
+  public class OrderService {
+      @Autowired
+      private OrderRepository repo; // hidden dependency, breaks testability
+  }
 
-```java
-@Bean
-@Scope("prototype")
-public ExpensiveObject expensiveObject() {
-    return new ExpensiveObject();
-}
-```
+  // 2. ⚠️ Setter Injection — for optional dependencies
+  @Service
+  public class OrderService {
+      private OrderRepository repo;
+      
+      @Autowired
+      public void setRepo(OrderRepository repo) { this.repo = repo; }
+  }
 
----
+  // 3. ✅ Constructor Injection — BEST (used by Spring Boot + Lombok)
+  @Service
+  @RequiredArgsConstructor  // Lombok generates the constructor
+  public class OrderService {
+      private final OrderRepository repo;     // final = guaranteed, immutable
+      private final EmailService emailService;
+      // Lombok generates: public OrderService(OrderRepository repo, EmailService email) {...}
+  }
+  ```
 
-## 3. Bean Lifecycle
+  **Why constructor injection wins:**
+  - Dependencies are `final` — immutable after creation
+  - Makes dependencies visible and explicit
+  - Easy to test: `new OrderService(mockRepo, mockEmailService)`
+  - No Spring needed for unit tests!
 
-```
-Container Created
-       ↓
-Bean Instantiated (constructor)
-       ↓
-Dependencies Injected (@Autowired)
-       ↓
-@PostConstruct (init logic)
-       ↓
-Bean Ready to Use
-       ↓
-@PreDestroy (cleanup logic)
-       ↓
-Container Shutdown
-```
-
-```java
-@Component
-public class MyBean {
-
-    @PostConstruct
-    public void init() {
-        System.out.println("Bean initialized! Connect to DB, warm caches here.");
-    }
-
-    @PreDestroy
-    public void cleanup() {
-        System.out.println("Bean destroyed! Close connections here.");
-    }
-}
-```
+  🏭 **Real World:** Accenture's Spring Boot codebase likely follows `@RequiredArgsConstructor` + constructor injection as the standard. This is the modern Spring recommendation.
 
 ---
 
-## 4. Spring Data JPA
+- [ ] **What are Bean Scopes? Explain singleton vs prototype.**
 
-### Repository Hierarchy
-```
-Repository (marker)
-    └── CrudRepository (CRUD methods)
-            └── PagingAndSortingRepository
-                    └── JpaRepository (flush, batch) ← Use this
-```
+  | Scope | When | One Instance Per |
+  |---|---|---|
+  | `singleton` (default) | Always | **Spring Application Context** |
+  | `prototype` | On request | **Each time bean is requested** |
+  | `request` | Web apps | **Each HTTP Request** |
+  | `session` | Web apps | **Each HTTP Session** |
 
-### Custom Queries
-```java
-public interface OrderRepository extends JpaRepository<Order, Long> {
+  ```java
+  // Singleton (default) — same object shared across all HTTP requests
+  @Service // → @Scope("singleton") by default
+  public class OrderService { ... } // one instance, all threads share it
 
-    // Derived Query (Spring generates SQL)
-    List<Order> findByStatusAndCustomerId(String status, Long customerId);
+  // Prototype — new instance every time
+  @Component
+  @Scope("prototype")
+  public class ReportGenerator { // new instance per use (stateful, not thread-safe)
+      private List<String> rows = new ArrayList<>(); // safe! each call gets fresh list
+  }
+  ```
 
-    // JPQL Query
-    @Query("SELECT o FROM Order o WHERE o.totalAmount > :amount")
-    List<Order> findExpensiveOrders(@Param("amount") Double amount);
+  🏭 **Real World:** `singleton` is correct for **stateless services** (no instance variables that change per-request). If a bean holds per-request state (like a report builder), it must be `prototype`. Mixing these up causes bugs where one user's data leaks into another user's response!
 
-    // Native SQL
-    @Query(value = "SELECT * FROM orders WHERE status = ?1", nativeQuery = true)
-    List<Order> findByStatusNative(String status);
-}
-```
-
-### @Transactional — MOST IMPORTANT
-```java
-@Service
-@Transactional  // All methods transactional by default
-public class OrderService {
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void createOrder(Order order) {
-        // Runs in a NEW transaction, even if called from within another transaction
-    }
-
-    @Transactional(isolation = Isolation.REPEATABLE_READ)
-    public Order getOrder(Long id) {
-        // Prevents non-repeatable reads
-    }
-
-    @Transactional(readOnly = true)  // Performance optimization for reads
-    public List<Order> getAllOrders() { ... }
-}
-```
-
-**Propagation levels to know:**
-- `REQUIRED` (default): Join existing tx or create new one
-- `REQUIRES_NEW`: Always create a new tx, suspend existing
-- `SUPPORTS`: Use existing tx if present, else non-transactional
-- `NEVER`: Must NOT run within a transaction
+  ⚠️ **Classic bug:** Adding a `List` field to a `@Service` (singleton) to accumulate request data — all 1000 concurrent users write to the same list. Fix: use `prototype` scope or pass data as method parameters.
 
 ---
 
-## 5. Auto-Configuration & application.yml
+- [ ] **How does Spring Boot Auto-Configuration work?**
 
-```yaml
-# application.yml
-spring:
-  application:
-    name: order-service
-  datasource:
-    url: jdbc:postgresql://localhost:5432/orders_db
-    username: ${DB_USER:postgres}   # env var with default fallback
-    password: ${DB_PASS:secret}
-  jpa:
-    hibernate:
-      ddl-auto: validate           # never use 'create-drop' in prod!
-    show-sql: false
+  When your app starts, Spring Boot reads:
+  `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`
 
-server:
-  port: 8080
+  This file lists hundreds of auto-config classes. Each uses `@Conditional` annotations to decide whether to activate:
 
----
-# Profile-specific overrides
-spring:
-  config:
-    activate:
-      on-profile: dev
-  jpa:
-    show-sql: true
-```
+  ```java
+  // Spring's DataSourceAutoConfiguration (simplified)
+  @Configuration
+  @ConditionalOnClass(DataSource.class)          // only if DataSource class is on classpath
+  @ConditionalOnMissingBean(DataSource.class)    // only if YOU haven't defined your own
+  @EnableConfigurationProperties(DataSourceProperties.class)
+  public class DataSourceAutoConfiguration {
+      @Bean
+      public DataSource dataSource(DataSourceProperties props) {
+          return props.initializeDataSourceBuilder().build(); // creates HikariCP pool
+      }
+  }
+  ```
 
-**Profiles:**
-```bash
-# Run with dev profile
-java -jar app.jar --spring.profiles.active=dev
+  🏭 **Real World:** Add `spring-boot-starter-data-jpa` to your `pom.xml` → Spring auto-configures Hibernate, EntityManagerFactory, TransactionManager. Add `spring-boot-starter-redis` → auto-configures RedisTemplate. You write **zero configuration** for these. That's the magic of auto-config.
 
-# Or in IDE
--Dspring.profiles.active=dev
-```
+  ```yaml
+  # application.yml — all you need for DB config
+  spring:
+    datasource:
+      url: jdbc:postgresql://localhost:5432/mydb
+      username: user
+      password: pass
+    jpa:
+      hibernate:
+        ddl-auto: validate
+  ```
 
 ---
 
-## 6. Key Interview Q&A
+- [ ] **What is `@Transactional`? Where should it go and why?**
 
-| Question | Answer |
-|---|---|
-| `@Component` vs `@Service` vs `@Repository`? | All register beans. `@Service` = business layer, `@Repository` = adds exception translation |
-| What is `@SpringBootApplication`? | = `@Configuration` + `@EnableAutoConfiguration` + `@ComponentScan` |
-| How does auto-configuration work? | Spring reads `META-INF/spring.factories`, checks conditions (`@ConditionalOnClass`) |
-| N+1 Problem in JPA? | Fetching parent + N separate queries for children. Fix: `@EntityGraph` or JOIN FETCH |
-| What is `@Transactional` self-invocation problem? | Calling a `@Transactional` method from within the same class bypasses the proxy! |
-| `FetchType.LAZY` vs `EAGER`? | LAZY = load only when accessed, EAGER = load immediately. Use LAZY by default |
+  `@Transactional` wraps a method in a **database transaction**. If the method completes normally → `COMMIT`. If an unchecked exception is thrown → `ROLLBACK`. Spring manages this via AOP proxy.
+
+  ```java
+  // ✅ CORRECT — on service layer
+  @Service
+  public class OrderService {
+
+      @Transactional  // ← service layer is the right place
+      public Order createOrder(CreateOrderRequest req) {
+          Order order = orderRepo.save(new Order(req));    // DB write 1
+          inventoryRepo.decrementStock(req.getProductId()); // DB write 2
+          // If EITHER fails → BOTH are rolled back. Atomicity!
+          return order;
+      }
+
+      @Transactional(readOnly = true) // ← optimization for reads
+      public List<Order> getOrdersByCustomer(Long customerId) {
+          return orderRepo.findByCustomerId(customerId);
+          // Hibernate skips dirty checking — faster!
+      }
+  }
+  ```
+
+  🏭 **Real World:** E-commerce order creation: write to `orders` table AND decrement `inventory` table. Both must succeed or both must fail. Without `@Transactional`, if the server crashes between the two writes, you'd have an order with no inventory deduction (overselling!).
+
+---
+
+- [ ] **What is the self-invocation problem with `@Transactional`?**
+
+  Spring's `@Transactional` works through a **proxy object** wrapping your bean. External calls go through the proxy (transaction applied). Internal calls (same class calling itself) **bypass the proxy** — no transaction!
+
+  ```java
+  @Service
+  public class OrderService {
+
+      // ❌ BROKEN — internal call bypasses proxy, no transaction on createOrder!
+      public void processOrders(List<CreateOrderRequest> requests) {
+          for (var req : requests) {
+              createOrder(req); // Direct call — skips Spring's proxy!
+          }
+      }
+
+      @Transactional
+      public Order createOrder(CreateOrderRequest req) { ... }
+  }
+
+  // ✅ FIX Option 1: Inject self
+  @Service
+  public class OrderService {
+      @Lazy @Autowired
+      private OrderService self; // inject own proxy
+
+      public void processOrders(List<CreateOrderRequest> requests) {
+          for (var req : requests) {
+              self.createOrder(req); // Goes through proxy ✅
+          }
+      }
+  }
+
+  // ✅ FIX Option 2: Move to separate class (cleaner)
+  @Service
+  public class OrderProcessingService {
+      @Autowired private OrderService orderService;
+
+      public void processOrders(List<CreateOrderRequest> requests) {
+          requests.forEach(orderService::createOrder); // external call ✅
+      }
+  }
+  ```
+
+  🏭 **Real World:** This is one of the top interview questions at companies like Accenture/TCS because it's a subtle bug that causes production issues. Interviewers often ask: "Your transaction isn't rolling back, why?"
+
+---
+
+- [ ] **What is the N+1 problem in JPA? How do you fix it?**
+
+  You fetch **1** query for N orders, then execute **N** separate queries to fetch each order's items.
+  Total = N+1 database round trips. For 1000 orders = 1001 queries. 🐢
+
+  ```java
+  // ❌ N+1 problem setup
+  @Entity
+  public class Order {
+      @OneToMany(mappedBy = "order", fetch = FetchType.LAZY) // LAZY = query per access
+      private List<OrderItem> items;
+  }
+
+  // This triggers N+1:
+  List<Order> orders = orderRepo.findAll();           // Query 1: SELECT * FROM orders
+  orders.forEach(o -> System.out.println(o.getItems())); // N queries: SELECT * FROM items WHERE order_id=?
+
+  // ✅ FIX 1: JOIN FETCH in JPQL
+  @Query("SELECT DISTINCT o FROM Order o JOIN FETCH o.items")
+  List<Order> findAllWithItems();
+  // ONE query: SELECT orders.*, items.* FROM orders JOIN items ON ...
+
+  // ✅ FIX 2: @EntityGraph (no JPQL needed)
+  @EntityGraph(attributePaths = {"items", "customer"})
+  List<Order> findByStatus(String status);
+
+  // ✅ FIX 3: @BatchSize (for large collections)
+  @OneToMany
+  @BatchSize(size = 50) // fetches items for 50 orders in one query
+  private List<OrderItem> items;
+  ```
+
+  🏭 **Real World:** This is the #1 Hibernate performance issue. Running `SHOW SQL` on a production app and seeing 1001 queries for what should be 1 is a classic N+1. Enable `spring.jpa.show-sql=true` locally and watch for repeated queries.
+
+---
+
+- [ ] **What are `@Transactional` Propagation types? (REQUIRED vs REQUIRES_NEW)**
+
+  Propagation controls what happens when a transactional method **calls another** transactional method:
+
+  | Propagation | Behavior | Use Case |
+  |---|---|---|
+  | `REQUIRED` (default) | Join existing tx, or create new one | Normal service methods |
+  | `REQUIRES_NEW` | **Suspend** existing tx, create fresh one | Audit logs (must save even if main tx rolls back) |
+  | `SUPPORTS` | Join if exists, else no tx | Read methods |
+  | `NEVER` | Throw exception if in a tx | Background jobs |
+  | `NOT_SUPPORTED` | Suspend tx, run without | Batch reads |
+
+  ```java
+  @Service
+  public class OrderService {
+      @Autowired private AuditService auditService;
+
+      @Transactional
+      public Order createOrder(CreateOrderRequest req) {
+          Order order = orderRepo.save(new Order(req));
+          
+          auditService.log("ORDER_CREATED", order.getId()); // saves in NEW transaction
+          
+          throw new RuntimeException("Simulated failure"); // main tx ROLLS BACK
+          // But audit log IS saved (REQUIRES_NEW committed before exception)
+      }
+  }
+
+  @Service
+  public class AuditService {
+      @Transactional(propagation = Propagation.REQUIRES_NEW)
+      public void log(String action, Long entityId) {
+          auditRepo.save(new AuditLog(action, entityId, Instant.now()));
+          // Commits immediately in its own transaction
+      }
+  }
+  ```
+
+  🏭 **Real World:** Audit logging is the classic use case. Regulatory systems (banking, healthcare) must record every action even if the main operation fails.
+
+---
+
+## 🔷 Spring MVC & REST
+
+- [ ] **How does global exception handling work with `@RestControllerAdvice`?**
+
+  Without global handling, every controller method would need try-catch. `@RestControllerAdvice` centralizes all exception-to-response mapping.
+
+  ```java
+  // Custom exceptions
+  public class OrderNotFoundException extends RuntimeException {
+      public OrderNotFoundException(Long id) {
+          super("Order not found: " + id);
+      }
+  }
+
+  public class InsufficientStockException extends RuntimeException {
+      private final Long productId;
+      public InsufficientStockException(Long productId) {
+          super("Insufficient stock for product: " + productId);
+          this.productId = productId;
+      }
+  }
+
+  // Centralized handler — ONE place for all error responses
+  @RestControllerAdvice
+  @Slf4j
+  public class GlobalExceptionHandler {
+
+      @ExceptionHandler(OrderNotFoundException.class)
+      public ResponseEntity<ErrorResponse> handleNotFound(OrderNotFoundException ex,
+                                                           HttpServletRequest request) {
+          log.warn("Order not found: {}", ex.getMessage());
+          return ResponseEntity.status(HttpStatus.NOT_FOUND)
+              .body(new ErrorResponse("ORDER_NOT_FOUND", ex.getMessage(),
+                                     request.getRequestURI(), Instant.now()));
+      }
+
+      @ExceptionHandler(InsufficientStockException.class)
+      public ResponseEntity<ErrorResponse> handleStock(InsufficientStockException ex,
+                                                        HttpServletRequest request) {
+          return ResponseEntity.status(HttpStatus.CONFLICT)
+              .body(new ErrorResponse("INSUFFICIENT_STOCK", ex.getMessage(),
+                                     request.getRequestURI(), Instant.now()));
+      }
+
+      @ExceptionHandler(MethodArgumentNotValidException.class)
+      public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex,
+                                                             HttpServletRequest request) {
+          String message = ex.getBindingResult().getFieldErrors().stream()
+              .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
+              .collect(Collectors.joining(", "));
+          return ResponseEntity.badRequest()
+              .body(new ErrorResponse("VALIDATION_FAILED", message,
+                                     request.getRequestURI(), Instant.now()));
+      }
+
+      @ExceptionHandler(Exception.class)  // catch-all
+      public ResponseEntity<ErrorResponse> handleAll(Exception ex, HttpServletRequest request) {
+          log.error("Unexpected error", ex);
+          return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+              .body(new ErrorResponse("INTERNAL_ERROR", "Something went wrong",
+                                     request.getRequestURI(), Instant.now()));
+      }
+  }
+
+  // Consistent error response body
+  public record ErrorResponse(String code, String message, String path, Instant timestamp) {}
+  ```
+
+  🏭 **Real World:** Every production Spring Boot app has a `GlobalExceptionHandler`. Without it, Spring returns ugly HTML error pages or inconsistent JSON structures. Clients (Angular/React frontend) need predictable error format.
+
+---
+
+## 🔗 Study References
+- [enhorse/java-interview — Spring](https://github.com/enhorse/java-interview/blob/master/spring.md)
+- [Baeldung — Spring @Transactional Guide](https://www.baeldung.com/transaction-configuration-with-jpa-and-spring)
+- [Baeldung — Spring N+1 Problem](https://www.baeldung.com/spring-hibernate-n1-problem)
+- [Baeldung — @RestControllerAdvice](https://www.baeldung.com/exception-handling-for-rest-with-spring)

@@ -1,217 +1,105 @@
-# 📘 Day 3 – REST APIs & Microservices (May 4th)
+# 📘 Day 3 — REST APIs & Microservices (May 4th)
 
-> **Goal:** Be able to design and defend a RESTful API and microservices architecture end-to-end.
-
----
-
-## ✅ Checklist
-- [ ] REST Principles (Idempotency, Stateless)
-- [ ] HTTP Status Codes & Methods
-- [ ] Spring MVC (@RestController, Exception Handling)
-- [ ] Microservices Patterns (Gateway, Circuit Breaker, Service Discovery)
-- [ ] API versioning strategies
+> **Source alignment:** [enhorse/java-interview](https://github.com/enhorse/java-interview) · Web Basics, REST, Microservices sections
 
 ---
 
-## 1. REST Principles
+## ✅ Master Checklist
 
-| Principle | Meaning |
-|---|---|
-| **Stateless** | Server stores NO session state. Each request must carry all info |
-| **Uniform Interface** | Standard HTTP methods, resource-based URLs |
-| **Client-Server** | UI and Backend are decoupled |
-| **Cacheable** | Responses can be cached (GET should be cacheable) |
+### 🔷 HTTP & Web Basics
+- [ ] What is HTTP vs HTTPS? How does TLS handshake work?
+- [ ] What are the HTTP methods? Which are idempotent? Which are safe?
+- [ ] What is the difference between PUT and PATCH?
+- [ ] What is the difference between GET and POST?
+- [ ] Know all HTTP status code families: 1xx, 2xx, 3xx, 4xx, 5xx.
+- [ ] What is CORS? How do you enable it in Spring Boot?
+- [ ] What is a cookie vs a session vs a JWT token?
+- [ ] What is the difference between Authentication and Authorization?
+- [ ] What is OAuth 2.0? What is OpenID Connect?
+- [ ] What is a WebSocket? When to use it over REST?
+- [ ] What is content negotiation (Accept header)?
+- [ ] What is `application/json` vs `application/xml`?
+- [ ] What is HATEOAS? What REST maturity level does it represent?
 
-### Idempotency — CRITICAL INTERVIEW TOPIC
-| Method | Idempotent? | Safe? | Description |
-|---|---|---|---|
-| GET | ✅ Yes | ✅ Yes | Read only, no side effects |
-| POST | ❌ No | ❌ No | Creates resource, NOT idempotent |
-| PUT | ✅ Yes | ❌ No | Full replace, calling twice = same result |
-| PATCH | ❌ No | ❌ No | Partial update |
-| DELETE | ✅ Yes | ❌ No | Deleting again = same result (not found) |
+### 🔷 RESTful API Design
+- [ ] What are the 6 REST architectural constraints?
+- [ ] What is "stateless" in REST?
+- [ ] How do you design URLs? (nouns not verbs, plural resources)
+- [ ] How do you version a REST API? (URI `/v1/`, Header, Accept header)
+- [ ] How do you implement pagination? (`page`, `size`, `sort` params)
+- [ ] How do you design error responses? (consistent error body structure)
+- [ ] What is an idempotency key? Why is it important for POST?
+- [ ] What is request throttling / rate limiting?
+- [ ] What is an API contract? What is OpenAPI / Swagger?
+
+### 🔷 Microservices Architecture
+- [ ] What is a Microservice? How is it different from a monolith?
+- [ ] What are the advantages of microservices? Disadvantages?
+- [ ] What is Domain-Driven Design (DDD)? What is a Bounded Context?
+- [ ] What is an API Gateway? What problems does it solve?
+- [ ] What is Service Discovery? How does Eureka work?
+- [ ] What is a Load Balancer? Client-side vs Server-side load balancing.
+- [ ] What is the Circuit Breaker pattern? States: CLOSED, OPEN, HALF-OPEN.
+- [ ] What is Resilience4j? Key annotations: `@CircuitBreaker`, `@Retry`, `@TimeLimiter`.
+- [ ] What is the Bulkhead pattern?
+- [ ] What is the Saga pattern? Choreography vs Orchestration.
+- [ ] What is the Strangler Fig pattern?
+- [ ] What is the Sidecar pattern?
+- [ ] What is a service mesh? (Istio, Linkerd)
+- [ ] What is gRPC? When to prefer it over REST?
+- [ ] How do microservices handle distributed transactions?
+- [ ] What is eventual consistency?
+- [ ] What is the Outbox pattern?
+- [ ] How do you propagate authentication tokens between microservices?
+
+### 🔷 Communication Patterns
+- [ ] Synchronous vs Asynchronous communication — when to use each?
+- [ ] What is request-response vs event-driven?
+- [ ] What is a Dead Letter Queue (DLQ)? When does a message go to DLQ?
+- [ ] What is idempotent message processing? Why is it critical?
 
 ---
 
-## 2. HTTP Status Codes
-
-| Code | Meaning | When to Use |
-|---|---|---|
-| 200 | OK | Successful GET, PUT |
-| 201 | Created | Successful POST |
-| 204 | No Content | Successful DELETE |
-| 400 | Bad Request | Validation failure |
-| 401 | Unauthorized | Not authenticated |
-| 403 | Forbidden | Authenticated but no permission |
-| 404 | Not Found | Resource doesn't exist |
-| 409 | Conflict | Duplicate resource |
-| 422 | Unprocessable Entity | Semantic validation error |
-| 500 | Internal Server Error | Unexpected server error |
-| 503 | Service Unavailable | Downstream dependency down |
-
----
-
-## 3. Spring MVC — REST Controller
+## 📝 Key Code to Write from Memory
 
 ```java
-@RestController
-@RequestMapping("/api/v1/orders")
-@Validated
-public class OrderController {
-
-    private final OrderService orderService;
-
-    public OrderController(OrderService orderService) {
-        this.orderService = orderService;
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<OrderResponse> getOrder(@PathVariable Long id) {
-        return ResponseEntity.ok(orderService.findById(id));
-    }
-
-    @PostMapping
-    public ResponseEntity<OrderResponse> createOrder(
-            @Valid @RequestBody CreateOrderRequest request) {
-        OrderResponse created = orderService.create(request);
-        URI location = URI.create("/api/v1/orders/" + created.getId());
-        return ResponseEntity.created(location).body(created);
-    }
-
-    @GetMapping
-    public ResponseEntity<Page<OrderResponse>> listOrders(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String status) {
-        return ResponseEntity.ok(orderService.findAll(status, PageRequest.of(page, size)));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
-        orderService.delete(id);
-        return ResponseEntity.noContent().build();
+// 1. CORS configuration in Spring Boot
+@Configuration
+public class CorsConfig {
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("https://myapp.com"));
+        config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 }
-```
 
-### Global Exception Handling
-```java
-@RestControllerAdvice
-public class GlobalExceptionHandler {
-
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(EntityNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-            .body(new ErrorResponse("NOT_FOUND", ex.getMessage()));
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
-        List<String> errors = ex.getBindingResult().getFieldErrors()
-            .stream()
-            .map(e -> e.getField() + ": " + e.getDefaultMessage())
-            .collect(Collectors.toList());
-        return ResponseEntity.badRequest()
-            .body(new ErrorResponse("VALIDATION_ERROR", errors.toString()));
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
-        // Log the full exception internally, but return generic message
-        log.error("Unexpected error", ex);
-        return ResponseEntity.internalServerError()
-            .body(new ErrorResponse("INTERNAL_ERROR", "Something went wrong"));
-    }
+// 2. Circuit Breaker with Resilience4j
+@CircuitBreaker(name = "inventoryService", fallbackMethod = "inventoryFallback")
+@Retry(name = "inventoryService")
+public Integer checkStock(Long productId) {
+    return inventoryClient.getStock(productId);
 }
-```
 
----
-
-## 4. Microservices Architecture
-
-### Key Patterns
-
-**API Gateway Pattern:**
-```
-Client → [API Gateway] → Order Service
-                       → User Service
-                       → Notification Service
-
-Benefits:
-- Single entry point
-- Authentication/Authorization
-- Rate Limiting
-- Load Balancing
-- SSL Termination
-Tools: Spring Cloud Gateway, AWS API Gateway, Kong
-```
-
-**Circuit Breaker Pattern (Resilience4j):**
-```java
-@Service
-public class ProductService {
-
-    @CircuitBreaker(name = "productService", fallbackMethod = "fallbackProduct")
-    @Retry(name = "productService")
-    @TimeLimiter(name = "productService")
-    public CompletableFuture<Product> getProduct(Long id) {
-        return CompletableFuture.supplyAsync(() -> productClient.getById(id));
-    }
-
-    // Called when circuit is OPEN or after retries exhausted
-    public CompletableFuture<Product> fallbackProduct(Long id, Throwable ex) {
-        log.warn("Fallback triggered for product {}: {}", id, ex.getMessage());
-        return CompletableFuture.completedFuture(Product.unknown());
-    }
+public Integer inventoryFallback(Long productId, Throwable t) {
+    log.warn("Inventory service down, returning cached value");
+    return redisTemplate.opsForValue().get("stock:" + productId);
 }
-```
 
-**States of a Circuit Breaker:**
-```
-CLOSED (Normal) → too many failures → OPEN (Rejects all calls)
-                                          ↓ after timeout
-                                       HALF-OPEN (Lets a few calls through)
-                                          ↓ success → CLOSED
-                                          ↓ failure → OPEN
-```
-
-**Service Discovery:**
-```
-Services register themselves → [Eureka/Consul Registry]
-Other services query registry → Get healthy instance list
-                              → Call directly or via Gateway
-
-Tools: Netflix Eureka, HashiCorp Consul, Kubernetes DNS
+// 3. Consistent error response structure
+public record ErrorResponse(
+    String code,
+    String message,
+    Instant timestamp,
+    String path
+) {}
 ```
 
 ---
 
-## 5. API Versioning Strategies
-
-```java
-// Strategy 1: URI versioning (Most common, clear)
-GET /api/v1/orders
-GET /api/v2/orders
-
-// Strategy 2: Header versioning (Cleaner URLs)
-GET /api/orders
-Headers: API-Version: 2
-
-// Strategy 3: Accept header (Content negotiation)
-GET /api/orders
-Accept: application/vnd.myapp.v2+json
-```
-
----
-
-## 6. Key Interview Q&A
-
-| Question | Answer |
-|---|---|
-| REST vs SOAP? | REST: lightweight JSON, stateless, HTTP. SOAP: XML, has standards/contracts (WSDL), more verbose |
-| PUT vs PATCH? | PUT replaces the entire resource. PATCH updates only specified fields |
-| What is HATEOAS? | Responses include links to related actions (Level 3 REST) |
-| What is service mesh? | Infrastructure layer for service-to-service comms (Istio, Linkerd) |
-| How do microservices communicate? | Sync (REST, gRPC) or Async (Kafka, RabbitMQ) |
-| What is the Saga Pattern? | Distributed transactions via a sequence of local transactions + compensating transactions |
-| How to secure microservices? | JWT tokens validated at API Gateway, OAuth2/OIDC |
+## 🔗 Reference
+- [enhorse/java-interview — Web Basics](https://github.com/enhorse/java-interview/blob/master/web.md)

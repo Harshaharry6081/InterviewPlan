@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Interview Prep — Day Viewer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
+  <!-- Marked.js for markdown parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- Highlight.js for code syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    :root {
+      --bg: #0a0d14;
+      --surface: #111827;
+      --surface2: #1a2233;
+      --border: rgba(99,102,241,0.2);
+      --accent: #6366f1;
+      --accent2: #22d3ee;
+      --accent3: #a78bfa;
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --radius: 12px;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; min-height:100vh; }
+
+    body::before {
+      content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+      background: radial-gradient(ellipse 70% 40% at 15% 5%, rgba(99,102,241,0.1) 0%, transparent 60%),
+                  radial-gradient(ellipse 50% 30% at 85% 90%, rgba(34,211,238,0.07) 0%, transparent 60%);
+    }
+
+    /* ── Top Nav ── */
+    .topnav {
+      position:sticky; top:0; z-index:100;
+      background:rgba(10,13,20,0.85); backdrop-filter:blur(16px);
+      border-bottom:1px solid var(--border);
+      padding:14px 24px; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .nav-left { display:flex; align-items:center; gap:14px; }
+    .back-btn {
+      display:inline-flex; align-items:center; gap:6px;
+      color:var(--accent3); text-decoration:none; font-size:14px; font-weight:500;
+      padding:6px 14px; border-radius:8px; border:1px solid var(--border);
+      background:rgba(99,102,241,0.08); transition:.2s;
+    }
+    .back-btn:hover { background:rgba(99,102,241,0.18); border-color:var(--accent); }
+    .nav-title { font-size:15px; font-weight:700; color:var(--text); }
+    .nav-day-badge {
+      font-size:12px; padding:3px 10px; border-radius:100px;
+      background:rgba(99,102,241,0.15); border:1px solid var(--border); color:var(--accent3);
+    }
+    .nav-right { display:flex; align-items:center; gap:10px; }
+    .nav-btn {
+      padding:6px 14px; border-radius:8px; border:1px solid var(--border);
+      background:var(--surface); color:var(--text); font-size:13px; cursor:pointer;
+      text-decoration:none; display:inline-flex; align-items:center; gap:5px; transition:.2s;
+    }
+    .nav-btn:hover { border-color:var(--accent2); color:var(--accent2); }
+
+    /* ── Progress Bar ── */
+    .day-progress {
+      background:var(--surface); border-bottom:1px solid var(--border);
+      padding:10px 24px; display:flex; align-items:center; gap:14px;
+    }
+    .progress-bar-sm { flex:1; height:6px; background:var(--surface2); border-radius:100px; overflow:hidden; }
+    .progress-fill-sm { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:100px; transition:width .6s; }
+    .progress-text { font-size:12px; color:var(--muted); white-space:nowrap; }
+    .progress-count { font-size:12px; font-weight:700; color:var(--green); }
+
+    /* ── Layout ── */
+    .layout { position:relative; z-index:1; max-width:900px; margin:0 auto; padding:36px 24px 80px; }
+
+    /* ── Markdown Content Styles ── */
+    .md-content h1 { font-size:2rem; font-weight:800; margin-bottom:8px;
+      background:linear-gradient(135deg,#fff 0%,var(--accent3) 60%,var(--accent2) 100%);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .md-content h2 {
+      font-size:1.25rem; font-weight:700; margin:36px 0 16px;
+      color:var(--accent2); padding-bottom:10px; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; gap:8px;
+    }
+    .md-content h3 { font-size:1.05rem; font-weight:700; margin:24px 0 12px; color:var(--accent3); }
+    .md-content h4 { font-size:.95rem; font-weight:600; margin:18px 0 10px; color:var(--yellow); }
+    .md-content p { line-height:1.8; margin-bottom:14px; color:#cbd5e1; }
+    .md-content a { color:var(--accent2); text-decoration:none; }
+    .md-content a:hover { text-decoration:underline; }
+    .md-content strong { color:var(--text); font-weight:600; }
+    .md-content em { color:var(--muted); font-style:italic; }
+    .md-content hr { border:none; border-top:1px solid var(--border); margin:28px 0; }
+    .md-content blockquote {
+      border-left:3px solid var(--accent); background:rgba(99,102,241,0.08);
+      padding:14px 18px; border-radius:0 8px 8px 0; margin:16px 0; color:var(--muted);
+    }
+
+    /* ── Checkboxes ── */
+    .md-content ul { list-style:none; padding:0; margin-bottom:14px; }
+    .md-content ul li {
+      display:flex; align-items:flex-start; gap:10px; padding:8px 12px;
+      border-radius:8px; margin-bottom:4px; cursor:pointer; transition:.15s;
+      border:1px solid transparent; line-height:1.6;
+    }
+    .md-content ul li:hover { background:rgba(99,102,241,0.07); border-color:var(--border); }
+    .md-content ul li.checked { background:rgba(52,211,153,0.07); border-color:rgba(52,211,153,0.2); }
+    .md-content ul li.checked span { color:var(--muted); text-decoration:line-through; }
+    .checkbox-icon { width:18px; height:18px; border:2px solid var(--muted); border-radius:5px;
+      flex-shrink:0; margin-top:2px; display:flex; align-items:center; justify-content:center;
+      transition:.15s; font-size:11px; }
+    .checked .checkbox-icon { background:var(--green); border-color:var(--green); color:#000; }
+    /* Non-checkbox list items (nested/bullets inside code sections) */
+    .md-content ol { padding-left:24px; margin-bottom:14px; }
+    .md-content ol li { padding:4px 0; line-height:1.7; color:#cbd5e1; }
+
+    /* ── Code Blocks ── */
+    .md-content pre {
+      border-radius:var(--radius); margin:16px 0; overflow:auto;
+      border:1px solid var(--border); position:relative;
+    }
+    .md-content pre code { font-family:'Fira Code',monospace; font-size:13px; line-height:1.7; }
+    .md-content code:not(pre code) {
+      font-family:'Fira Code',monospace; font-size:12.5px;
+      background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.2);
+      padding:2px 6px; border-radius:5px; color:var(--accent3);
+    }
+
+    /* ── Tables ── */
+    .md-content table { width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; }
+    .md-content th { background:var(--surface2); padding:10px 14px; text-align:left;
+      font-weight:600; color:var(--accent2); border:1px solid var(--border); }
+    .md-content td { padding:9px 14px; border:1px solid rgba(255,255,255,0.06); color:#cbd5e1; line-height:1.6; }
+    .md-content tr:nth-child(even) td { background:rgba(255,255,255,0.02); }
+    .md-content tr:hover td { background:rgba(99,102,241,0.05); }
+
+    /* ── Copy Button on Code ── */
+    .code-wrap { position:relative; }
+    .copy-btn {
+      position:absolute; top:10px; right:10px; padding:4px 10px; font-size:11px;
+      background:rgba(99,102,241,0.2); border:1px solid var(--border); border-radius:6px;
+      color:var(--muted); cursor:pointer; transition:.2s; z-index:2;
+    }
+    .copy-btn:hover { background:var(--accent); color:#fff; }
+
+    /* ── Loading / Error ── */
+    .loading { text-align:center; padding:80px 20px; }
+    .spinner { width:40px; height:40px; border:3px solid var(--border); border-top-color:var(--accent);
+      border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 16px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .error-box { background:rgba(248,113,113,0.1); border:1px solid rgba(248,113,113,0.3);
+      border-radius:var(--radius); padding:24px; text-align:center; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width:6px; height:6px; }
+    ::-webkit-scrollbar-track { background:var(--bg); }
+    ::-webkit-scrollbar-thumb { background:rgba(99,102,241,0.3); border-radius:4px; }
+
+    /* ── Audio Player Bar ── */
+    .audio-bar {
+      position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+      z-index:999; display:flex; align-items:center; gap:10px;
+      background:rgba(17,24,39,0.95); backdrop-filter:blur(20px);
+      border:1px solid var(--border); border-radius:100px;
+      padding:10px 20px; box-shadow:0 8px 40px rgba(0,0,0,0.5);
+      min-width:360px; transition:opacity .3s;
+    }
+    .audio-bar.hidden { opacity:0; pointer-events:none; }
+    .audio-btn {
+      width:36px; height:36px; border-radius:50%; border:none; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; font-size:15px;
+      transition:.2s; flex-shrink:0;
+    }
+    .audio-btn.play  { background:var(--accent); color:#fff; }
+    .audio-btn.play:hover { background:#4f46e5; transform:scale(1.1); }
+    .audio-btn.stop  { background:var(--surface2); color:var(--muted); }
+    .audio-btn.stop:hover { background:rgba(248,113,113,0.2); color:var(--red,#f87171); }
+    .audio-label { font-size:12px; color:var(--muted); white-space:nowrap; flex:1; min-width:0;
+      overflow:hidden; text-overflow:ellipsis; }
+    .audio-label strong { color:var(--accent2); }
+    .speed-select {
+      background:var(--surface2); border:1px solid var(--border); color:var(--text);
+      font-size:12px; padding:4px 8px; border-radius:20px; cursor:pointer; outline:none;
+    }
+    .audio-toggle {
+      position:fixed; bottom:24px; right:24px; z-index:1000;
+      width:44px; height:44px; border-radius:50%; border:1px solid var(--border);
+      background:var(--surface); color:var(--accent3); font-size:18px;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 4px 20px rgba(0,0,0,0.4); transition:.2s;
+    }
+    .audio-toggle:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+    /* Highlight spoken word */
+    .tts-highlight { background:rgba(99,102,241,0.35); border-radius:3px; padding:0 2px; }
+  </style>
+</head>
+<body>
+
+<!-- Top Nav -->
+<nav class="topnav">
+  <div class="nav-left">
+    <a href="index.html" class="back-btn">← Back</a>
+    <span class="nav-day-badge" id="nav-day-badge">Day --</span>
+    <span class="nav-title" id="nav-title">Loading...</span>
+  </div>
+  <div class="nav-right">
+    <a id="prev-btn" class="nav-btn" href="#">← Prev</a>
+    <a id="next-btn" class="nav-btn" href="#">Next →</a>
+  </div>
+</nav>
+
+<!-- Progress -->
+<div class="day-progress">
+  <span class="progress-text">Day Progress:</span>
+  <div class="progress-bar-sm"><div class="progress-fill-sm" id="prog-fill" style="width:0%"></div></div>
+  <span class="progress-count" id="prog-count">0 / 0 done</span>
+</div>
+
+<!-- Content -->
+<div class="layout">
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <p style="color:var(--muted)">Loading your study notes...</p>
+  </div>
+  <div id="content" class="md-content" style="display:none"></div>
+</div>
+
+<!-- 🔊 Audio Toggle Button -->
+<button class="audio-toggle" id="audio-toggle" title="Text to Speech">🔊</button>
+
+<!-- 🔊 Audio Player Bar -->
+<div class="audio-bar hidden" id="audio-bar">
+  <button class="audio-btn play" id="tts-play" title="Play / Pause">▶</button>
+  <button class="audio-btn stop" id="tts-stop" title="Stop">⏹</button>
+  <span class="audio-label" id="tts-label"><strong>TTS</strong> Press ▶ to start reading</span>
+  <select class="speed-select" id="tts-speed">
+    <option value="0.75">0.75×</option>
+    <option value="1" selected>1×</option>
+    <option value="1.25">1.25×</option>
+    <option value="1.5">1.5×</option>
+    <option value="2">2×</option>
+  </select>
+</div>
+
+<script>
+// ── Day Manifest ──
+const DAYS = [
+  { day:1,  label:"Day 1",  title:"Core Java 8+",         file:"Day01-CoreJava/notes.md" },
+  { day:2,  label:"Day 2",  title:"Spring Boot",           file:"Day02-SpringBoot/notes.md" },
+  { day:3,  label:"Day 3",  title:"REST & Microservices",  file:"Day03-REST-Microservices/notes.md" },
+  { day:4,  label:"Day 4",  title:"Databases",             file:"Day04-Databases/notes.md" },
+  { day:5,  label:"Day 5",  title:"LLD & Design Patterns", file:"Day05-LLD-DesignPatterns/notes.md" },
+  { day:6,  label:"Day 6",  title:"Testing",               file:"Day06-Testing/notes.md" },
+  { day:7,  label:"Day 7",  title:"Kafka & Redis",         file:"Day07-Messaging-Caching/notes.md" },
+  { day:8,  label:"Day 8",  title:"Docker & Kubernetes",   file:"Day08-Docker-Kubernetes/notes.md" },
+  { day:9,  label:"Day 9",  title:"Cloud & Observability", file:"Day09-Cloud-DevOps/notes.md" },
+  { day:10, label:"Day 10", title:"Agile & Behavioral",    file:"Day10-Agile-Behavioral/notes.md" },
+  { day:11, label:"Day 11", title:"Mock Interview",        file:"Day11-MockInterview/notes.md" },
+];
+
+// ── Get current file from URL ──
+const params  = new URLSearchParams(window.location.search);
+const fileParam = params.get('file');
+const titleParam = params.get('title') ? decodeURIComponent(params.get('title')) : null;
+const currentIdx = DAYS.findIndex(d => d.file === fileParam);
+const currentDay = DAYS[currentIdx] || { day: '📁', label: 'Resource', title: titleParam || 'Resource', file: fileParam };
+
+// ── Update nav ──
+document.getElementById('nav-day-badge').textContent = currentDay.label || '📁 Resource';
+document.getElementById('nav-title').textContent      = currentDay.title || titleParam || 'Resource';
+document.title = `${currentDay.title || titleParam || 'Resource'} — Interview Prep`;
+
+// Prev / Next buttons — only show for actual day files
+const prevDay = DAYS[currentIdx - 1];
+const nextDay = DAYS[currentIdx + 1];
+const prevBtn = document.getElementById('prev-btn');
+const nextBtn = document.getElementById('next-btn');
+if (currentIdx === -1) {
+  // Resource page — hide nav buttons and progress bar
+  prevBtn.style.display = 'none';
+  nextBtn.style.display = 'none';
+  document.querySelector('.day-progress').style.display = 'none';
+} else {
+  prevBtn.href = prevDay ? `day.html?file=${prevDay.file}` : 'index.html';
+  prevBtn.textContent = prevDay ? `← ${prevDay.label}` : '← Home';
+  nextBtn.href = nextDay ? `day.html?file=${nextDay.file}` : 'index.html';
+  nextBtn.textContent = nextDay ? `${nextDay.label} →` : 'Home →';
+}
+
+// ── LocalStorage keys ──
+const STORAGE_KEY = `day_checks_${currentDay.day}`;
+let checked = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
+
+function saveChecks() { localStorage.setItem(STORAGE_KEY, JSON.stringify([...checked])); }
+
+// ── Progress ──
+function updateProgress() {
+  const items = document.querySelectorAll('.md-content ul li[data-idx]');
+  const total = items.length;
+  const done  = document.querySelectorAll('.md-content ul li[data-idx].checked').length;
+  const pct   = total ? Math.round((done / total) * 100) : 0;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-count').textContent = `${done} / ${total} done`;
+
+  // Also update the overall day progress on index page
+  const allDone = JSON.parse(localStorage.getItem('interview_prep_done') || '[]');
+  if (done === total && total > 0) {
+    if (!allDone.includes(currentDay.day)) { allDone.push(currentDay.day); localStorage.setItem('interview_prep_done', JSON.stringify(allDone)); }
+  }
+}
+
+// ── Configure marked ──
+marked.setOptions({ breaks: true, gfm: true });
+
+// ── Fetch and render markdown ──
+async function loadMarkdown(file) {
+  try {
+    const res  = await fetch(file);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+
+    // Parse markdown
+    let html = marked.parse(text);
+
+    // Inject into DOM
+    const container = document.getElementById('content');
+    container.innerHTML = html;
+    document.getElementById('loading').style.display = 'none';
+    container.style.display = 'block';
+
+    // ── Post-process: make checkboxes interactive ──
+    let checkIdx = 0;
+    container.querySelectorAll('ul li').forEach(li => {
+      // marked.js renders "- [ ]" as <li><input type="checkbox" disabled> text</li>
+      const input = li.querySelector('input[type="checkbox"]');
+      if (input) {
+        const idx = checkIdx++;
+        const wasChecked = checked.has(idx) || input.checked;
+        if (wasChecked) checked.add(idx);
+
+        // Get the label text (everything except the input)
+        input.remove();
+        const labelText = li.innerHTML.trim();
+
+        li.innerHTML = `<span class="checkbox-icon">${wasChecked ? '✓' : ''}</span><span>${labelText}</span>`;
+        li.dataset.idx = idx;
+        if (wasChecked) li.classList.add('checked');
+
+        li.addEventListener('click', () => {
+          const i = parseInt(li.dataset.idx);
+          if (checked.has(i)) { checked.delete(i); li.classList.remove('checked'); li.querySelector('.checkbox-icon').textContent = ''; }
+          else                 { checked.add(i);    li.classList.add('checked');    li.querySelector('.checkbox-icon').textContent = '✓'; }
+          saveChecks();
+          updateProgress();
+        });
+      }
+    });
+
+    // ── Syntax highlight + copy buttons ──
+    container.querySelectorAll('pre code').forEach(block => {
+      hljs.highlightElement(block);
+      const pre  = block.parentElement;
+      const wrap = document.createElement('div');
+      wrap.className = 'code-wrap';
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      const btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', () => {
+        navigator.clipboard.writeText(block.textContent).then(() => {
+          btn.textContent = '✓ Copied'; setTimeout(() => btn.textContent = 'Copy', 1500);
+        });
+      });
+      wrap.appendChild(btn);
+    });
+
+    updateProgress();
+
+  } catch (err) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    document.getElementById('content').innerHTML = `
+      <div class="error-box">
+        <p style="font-size:1.2rem;margin-bottom:8px">⚠️ Could not load notes</p>
+        <p style="color:var(--muted)">File not found: <code>${file}</code></p>
+        <p style="color:var(--muted);margin-top:8px">Make sure the server is running from the project root directory.</p>
+        <a href="index.html" style="display:inline-block;margin-top:16px;color:var(--accent2)">← Back to Home</a>
+      </div>`;
+  }
+}
+
+// ── Init ──
+const fileToLoad = fileParam || currentDay.file;
+loadMarkdown(fileToLoad);
+
+// ── 🔊 Text-to-Speech Engine ──
+const synth = window.speechSynthesis;
+let ttsUtterance = null;
+let ttsPlaying = false;
+let ttsPaused  = false;
+
+const audioBar    = document.getElementById('audio-bar');
+const audioToggle = document.getElementById('audio-toggle');
+const playBtn     = document.getElementById('tts-play');
+const stopBtn     = document.getElementById('tts-stop');
+const ttsLabel    = document.getElementById('tts-label');
+const ttsSpeed    = document.getElementById('tts-speed');
+
+// Show/hide audio bar
+audioToggle.addEventListener('click', () => {
+  audioBar.classList.toggle('hidden');
+  audioToggle.textContent = audioBar.classList.contains('hidden') ? '🔊' : '🔇';
+});
+
+// Extract clean readable text — skips ALL code, strips arrows/emojis/symbols
+function getReadableText() {
+  const container = document.getElementById('content');
+  if (!container) return '';
+
+  // Clone so we can remove nodes without affecting the display
+  const clone = container.cloneNode(true);
+
+  // Remove ALL code blocks and inline code from clone
+  clone.querySelectorAll('pre, code, .hljs, .code-wrap').forEach(el => el.remove());
+  // Remove copy buttons
+  clone.querySelectorAll('.copy-btn, .checkbox-icon').forEach(el => el.remove());
+
+  let text = '';
+  clone.querySelectorAll('h1,h2,h3,h4,p,li,blockquote,td').forEach(el => {
+    let t = el.innerText || el.textContent || '';
+
+    // Strip emojis (all unicode emoji ranges)
+    t = t.replace(/[\u{1F000}-\u{1FFFF}]/gu, '');
+    t = t.replace(/[\u{2600}-\u{27BF}]/gu, '');
+    t = t.replace(/[\u{FE00}-\u{FEFF}]/gu, '');
+
+    // Strip arrows and symbols
+    t = t.replace(/[→←↑↓↗↘↙↖⟹⟺➡⬅⬆⬇]/g, '');
+    t = t.replace(/[✅❌⚠️🏭💻📘🔗⭐📄]/g, '');
+    t = t.replace(/[|]/g, ''); // table pipes
+
+    // Strip markdown-like symbols
+    t = t.replace(/`[^`]*`/g, ''); // inline code remnants
+    t = t.replace(/#{1,4}\s/g, '');
+    t = t.replace(/\*{1,3}([^*]+)\*{1,3}/g, '$1'); // bold/italic markers
+    t = t.replace(/\s{2,}/g, ' ').trim();
+
+    if (t.length > 3) text += t + '. ';
+  });
+
+  return text.replace(/\.\s*\.\s*/g, '. ').trim();
+}
+
+let sentences = [];
+let currentChunk = 0;
+const TTS_STORAGE_KEY = `tts_progress_${currentDay.day || fileParam}`;
+
+// Load saved progress
+function loadTTSProgress() {
+  const saved = localStorage.getItem(TTS_STORAGE_KEY);
+  if (saved !== null) {
+    currentChunk = parseInt(saved, 10);
+  } else {
+    currentChunk = 0;
+  }
+}
+
+// Save progress
+function saveTTSProgress() {
+  localStorage.setItem(TTS_STORAGE_KEY, currentChunk);
+}
+
+// Speak a single chunk
+function speakNextChunk() {
+  if (currentChunk >= sentences.length) {
+    ttsPlaying = false; ttsPaused = false;
+    playBtn.textContent = '▶';
+    ttsLabel.innerHTML = '<strong>✅ Done!</strong> Press ▶ to replay';
+    currentChunk = 0; // reset
+    saveTTSProgress();
+    return;
+  }
+
+  ttsUtterance = new SpeechSynthesisUtterance(sentences[currentChunk].trim());
+  ttsUtterance.rate  = parseFloat(ttsSpeed.value);
+  ttsUtterance.pitch = 1;
+  ttsUtterance.lang  = 'en-US';
+
+  // Pick a nice voice if available
+  const voices = synth.getVoices();
+  const preferred = voices.find(v => v.name.includes('Google') && v.lang === 'en-US')
+                 || voices.find(v => v.lang === 'en-US')
+                 || voices[0];
+  if (preferred) ttsUtterance.voice = preferred;
+
+  ttsUtterance.onstart = () => {
+    ttsPlaying = true; ttsPaused = false;
+    playBtn.textContent = '⏸';
+    const progressText = `[${currentChunk + 1}/${sentences.length}]`;
+    ttsLabel.innerHTML = `<strong>🔊 Reading</strong> ${progressText} at ${ttsSpeed.value}×`;
+  };
+
+  ttsUtterance.onend = () => {
+    // Only proceed to next chunk if we weren't explicitly stopped or paused
+    if (ttsPlaying && !ttsPaused) {
+      currentChunk++;
+      saveTTSProgress();
+      speakNextChunk();
+    }
+  };
+
+  ttsUtterance.onerror = (e) => {
+    // Ignore interrupted errors during manual pause/stop
+    if (e.error === 'interrupted' && (!ttsPlaying || ttsPaused)) return;
+    
+    // Auto-recover from random Chrome 'interrupted' errors
+    if (e.error === 'interrupted') {
+      speakNextChunk(); // Just retry the current chunk
+      return;
+    }
+
+    ttsLabel.innerHTML = `<strong>Error:</strong> ${e.error}`;
+    playBtn.textContent = '▶';
+    ttsPlaying = false;
+  };
+
+  synth.speak(ttsUtterance);
+}
+
+// Play
+function ttsPlay() {
+  if (ttsPaused) {
+    ttsPaused = false;
+    ttsPlaying = true;
+    playBtn.textContent = '⏸';
+    ttsLabel.innerHTML = '<strong>🔊 Reading...</strong> (click ⏸ to pause)';
+    speakNextChunk(); // Resume from current chunk
+    return;
+  }
+
+  synth.cancel(); // clear any previous
+  const text = getReadableText();
+  if (!text) { ttsLabel.innerHTML = '<strong>Nothing to read</strong> yet — load a page first'; return; }
+  
+  sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  
+  loadTTSProgress();
+  
+  // If we already finished, start over
+  if (currentChunk >= sentences.length) {
+    currentChunk = 0;
+  }
+
+  // Start playing
+  speakNextChunk();
+}
+
+// Pause
+function ttsPause() {
+  if (synth.speaking && !synth.paused) {
+    synth.cancel(); // Must cancel in Chrome to reliably pause chunks
+    ttsPaused = true; ttsPlaying = false;
+    playBtn.textContent = '▶';
+    ttsLabel.innerHTML = '<strong>⏸ Paused</strong> — click ▶ to continue';
+  }
+}
+
+// Stop
+function ttsStop() {
+  synth.cancel();
+  ttsPlaying = false; ttsPaused = false;
+  playBtn.textContent = '▶';
+  ttsLabel.innerHTML = `<strong>TTS</strong> Stopped at [${currentChunk + 1}/${sentences.length}]`;
+}
+
+// Play/Pause toggle
+playBtn.addEventListener('click', () => {
+  if (ttsPlaying)      ttsPause();
+  else                 ttsPlay();
+});
+
+stopBtn.addEventListener('click', ttsStop);
+
+// Speed change — restart with new speed
+ttsSpeed.addEventListener('change', () => {
+  if (ttsPlaying || ttsPaused) { ttsStop(); ttsPlay(); }
+});
+
+// Stop when navigating away
+window.addEventListener('beforeunload', () => synth.cancel());
+
+// Keyboard shortcut: Space = play/pause, Escape = stop
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.code === 'Space' && e.ctrlKey) { e.preventDefault(); ttsPlaying ? ttsPause() : ttsPlay(); }
+  if (e.code === 'Escape') ttsStop();
+});
+</script>
+</body>
+</html>
