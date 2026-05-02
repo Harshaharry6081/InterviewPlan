@@ -391,9 +391,8 @@ function updateUIFromChecked() {
 
 // ── Progress ──
 function updateProgress() {
-  const items = document.querySelectorAll('.md-content ul li[data-idx]');
-  const total = items.length;
-  const done  = document.querySelectorAll('.md-content ul li[data-idx].checked').length;
+  const total = document.querySelectorAll('.is-checkable').length;
+  const done  = document.querySelectorAll('.is-checkable.checked').length;
   const pct   = total ? Math.round((done / total) * 100) : 0;
   
   const progFill = document.getElementById('prog-fill');
@@ -469,6 +468,7 @@ async function loadMarkdown(file) {
         <button class="item-play-btn" title="Read this">▶</button>
       `;
       li.dataset.idx = idx;
+      if (isCheckable) li.classList.add('is-checkable');
       if (isCheckable && wasChecked) li.classList.add('checked');
 
       // Click to toggle checkbox (if applicable)

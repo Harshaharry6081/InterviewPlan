@@ -368,8 +368,12 @@
 
     days.forEach(d => {
       const el = document.createElement('div');
-      const finished = isDone(d.day);
-      el.className = `day-card${finished ? ' done' : ''}${d.special ? ' interview-day' : ''}`;
+      
+      const stats = dayCounts[d.day] || { done: 0, total: d.items || 0 };
+      const pct = stats.total ? Math.round((stats.done / stats.total) * 100) : 0;
+      const isFinished = pct === 100 && stats.total > 0;
+      
+      el.className = `day-card${isFinished ? ' done' : ''}${d.special ? ' interview-day' : ''}`;
       
       const srcBadge = d.src ? `<span style="font-size:10px;padding:2px 7px;border-radius:100px;background:${srcColors[d.src]||'rgba(99,102,241,0.1)'};color:var(--muted)">${srcLabels[d.src]||d.src}</span>` : '';
       const itemsBadge = d.items ? `<span style="font-size:10px;padding:2px 7px;border-radius:100px;background:rgba(52,211,153,0.1);color:var(--green);border:1px solid rgba(52,211,153,0.2)">${d.items} items</span>` : '';
@@ -377,8 +381,6 @@
       // Granular progress info
       let progressHtml = '';
       if (!d.special) {
-        const stats = dayCounts[d.day] || { done: 0, total: d.items || 0 };
-        const pct = stats.total ? Math.round((stats.done / stats.total) * 100) : 0;
         progressHtml = `
           <div class="card-progress-wrap">
             <div class="card-progress-info">
@@ -398,15 +400,17 @@
             <div class="day-num">Day ${d.day}</div>
             <div class="card-date">${d.date}</div>
           </div>
-          ${d.special ? '<span style="font-size:22px">🎯</span>' : `<div class="status-dot${finished?' done':''}" title="${finished?'Done — click to undo':'Click to mark done'}"></div>`}
+          ${d.special ? '<span style="font-size:22px">🎯</span>' : `<div class="status-dot${isFinished?' done':''}" title="${isFinished?'Completed!':'In Progress'}">${isFinished ? '✓' : ''}</div>`}
         </div>
         <div class="card-title">${d.title}</div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">${srcBadge}${itemsBadge}</div>
         <div class="card-tags">${d.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
         ${progressHtml}
-        <a class="card-link" href="day.html?file=${d.file}" onclick="event.stopPropagation()">📄 Open Notes →</a>
+        <div class="card-link">📄 Open Notes →</div>
       `;
-      if (!d.special) el.addEventListener('click', () => toggleDay(d.day));
+      el.addEventListener('click', () => {
+        if (d.file) window.location.href = `day.html?file=${d.file}`;
+      });
       grid.appendChild(el);
     });
   }
