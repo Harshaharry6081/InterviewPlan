@@ -10,6 +10,7 @@
   <!-- Highlight.js for code syntax highlighting -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <!-- No manual script tags here, moving to type="module" at bottom -->
   <style>
     :root {
       --bg: #0a0d14;
@@ -111,6 +112,18 @@
       flex-shrink:0; margin-top:2px; display:flex; align-items:center; justify-content:center;
       transition:.15s; font-size:11px; }
     .checked .checkbox-icon { background:var(--green); border-color:var(--green); color:#000; }
+    
+    /* Individual Question Play Button */
+    .item-play-btn {
+      margin-left: auto; background: rgba(99,102,241,0.1); border: 1px solid var(--border);
+      color: var(--accent3); width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 10px;
+      cursor: pointer; transition: .2s; opacity: 0.4; flex-shrink: 0;
+    }
+    .md-content ul li:hover .item-play-btn { opacity: 1; }
+    .item-play-btn:hover { background: var(--accent); color: #fff; transform: scale(1.1); }
+    .item-play-btn.playing { background: var(--green); color: #000; opacity: 1; animation: pulse 1.5s infinite; }
+
     /* Non-checkbox list items (nested/bullets inside code sections) */
     .md-content ol { padding-left:24px; margin-bottom:14px; }
     .md-content ol li { padding:4px 0; line-height:1.7; color:#cbd5e1; }
@@ -205,6 +218,10 @@
     <span class="nav-title" id="nav-title">Loading...</span>
   </div>
   <div class="nav-right">
+    <div id="auth-info" style="display:none; align-items:center; gap:8px; margin-right:15px;">
+        <img id="user-photo" src="" style="width:24px; height:24px; border-radius:50%; border:1px solid var(--accent);">
+        <span id="user-name" style="font-size:12px; color:var(--muted);"></span>
+    </div>
     <a id="prev-btn" class="nav-btn" href="#">← Prev</a>
     <a id="next-btn" class="nav-btn" href="#">Next →</a>
   </div>
@@ -243,7 +260,11 @@
   </select>
 </div>
 
-<script>
+<script type="module">
+  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getDatabase, ref, set, get, onValue, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+  import { getAuth, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+
 // ── Day Manifest ──
 const DAYS = [
   { day:1,  label:"Day 1",  title:"Core Java 8+",         file:"Day01-CoreJava/notes.md" },
@@ -280,7 +301,8 @@ if (currentIdx === -1) {
   // Resource page — hide nav buttons and progress bar
   prevBtn.style.display = 'none';
   nextBtn.style.display = 'none';
-  document.querySelector('.day-progress').style.display = 'none';
+  const dp = document.querySelector('.day-progress');
+  if (dp) dp.style.display = 'none';
 } else {
   prevBtn.href = prevDay ? `day.html?file=${prevDay.file}` : 'index.html';
   prevBtn.textContent = prevDay ? `← ${prevDay.label}` : '← Home';
@@ -288,11 +310,84 @@ if (currentIdx === -1) {
   nextBtn.textContent = nextDay ? `${nextDay.label} →` : 'Home →';
 }
 
+// ── Firebase Setup ──
+const firebaseConfig = {
+  apiKey: "AIzaSyB_toM9EnF6_afyMI2GWvCcVj2xiW96PLA",
+  authDomain: "interviewplan3-5.firebaseapp.com",
+  projectId: "interviewplan3-5",
+  storageBucket: "interviewplan3-5.firebasestorage.app",
+  messagingSenderId: "227712805345",
+  appId: "1:227712805345:web:49267d05d9857fe2d20aa0",
+  measurementId: "G-E9JB03B6S8"
+};
+
+const app = getApps().find(a => a.name === 'books') || initializeApp(firebaseConfig, 'books');
+const db = getDatabase(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+let currentUser = null;
+
 // ── LocalStorage keys ──
 const STORAGE_KEY = `day_checks_${currentDay.day}`;
 let checked = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
 
-function saveChecks() { localStorage.setItem(STORAGE_KEY, JSON.stringify([...checked])); }
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    currentUser = user;
+    const authInfo = document.getElementById('auth-info');
+    if (authInfo) {
+      authInfo.style.display = 'flex';
+      document.getElementById('user-photo').src = user.photoURL;
+      document.getElementById('user-name').textContent = user.displayName.split(' ')[0];
+    }
+    syncWithFirebase();
+  } else {
+    currentUser = null;
+    const authInfo = document.getElementById('auth-info');
+    if (authInfo) authInfo.style.display = 'none';
+  }
+});
+
+async function syncWithFirebase() {
+  if (!currentUser) return;
+  const dayRef = ref(db, `users/${currentUser.uid}/days/${currentDay.day}`);
+  onValue(dayRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data && data.checkedIdxs) {
+      const remoteChecked = data.checkedIdxs;
+      checked = new Set([...checked, ...remoteChecked]);
+      saveChecks(false);
+      updateUIFromChecked();
+    }
+  });
+}
+
+async function saveChecks(sync = true) { 
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([...checked])); 
+  if (sync && currentUser) {
+    set(ref(db, `users/${currentUser.uid}/days/${currentDay.day}`), {
+      checkedIdxs: [...checked],
+      day: currentDay.day,
+      lastUpdated: serverTimestamp()
+    });
+  }
+}
+
+function updateUIFromChecked() {
+  document.querySelectorAll('.md-content ul li[data-idx]').forEach(li => {
+    const idx = parseInt(li.dataset.idx);
+    const icon = li.querySelector('.checkbox-icon');
+    if (checked.has(idx)) {
+      li.classList.add('checked');
+      if (icon) icon.textContent = '✓';
+    } else {
+      li.classList.remove('checked');
+      if (icon) icon.textContent = '';
+    }
+  });
+  updateProgress();
+}
 
 // ── Progress ──
 function updateProgress() {
@@ -300,13 +395,38 @@ function updateProgress() {
   const total = items.length;
   const done  = document.querySelectorAll('.md-content ul li[data-idx].checked').length;
   const pct   = total ? Math.round((done / total) * 100) : 0;
-  document.getElementById('prog-fill').style.width = pct + '%';
-  document.getElementById('prog-count').textContent = `${done} / ${total} done`;
+  
+  const progFill = document.getElementById('prog-fill');
+  const progCount = document.getElementById('prog-count');
+  
+  if (progFill) progFill.style.width = pct + '%';
+  if (progCount) progCount.textContent = `${done} / ${total} done`;
 
-  // Also update the overall day progress on index page
+  // Update granular progress for index page
+  const counts = JSON.parse(localStorage.getItem('interview_day_counts') || '{}');
+  counts[currentDay.day] = { done, total };
+  localStorage.setItem('interview_day_counts', JSON.stringify(counts));
+
+  // Also update the binary 'done' status if all items are finished
   const allDone = JSON.parse(localStorage.getItem('interview_prep_done') || '[]');
   if (done === total && total > 0) {
-    if (!allDone.includes(currentDay.day)) { allDone.push(currentDay.day); localStorage.setItem('interview_prep_done', JSON.stringify(allDone)); }
+    if (!allDone.includes(currentDay.day)) { 
+      allDone.push(currentDay.day); 
+      localStorage.setItem('interview_prep_done', JSON.stringify(allDone)); 
+    }
+  } else {
+    if (allDone.includes(currentDay.day)) {
+      const filtered = allDone.filter(d => d !== currentDay.day);
+      localStorage.setItem('interview_prep_done', JSON.stringify(filtered));
+    }
+  }
+
+  // Sync overall status to Firebase if logged in
+  if (currentUser) {
+    set(ref(db, `users/${currentUser.uid}/overall_progress`), {
+      doneDays: allDone,
+      lastUpdated: serverTimestamp()
+    });
   }
 }
 
@@ -332,32 +452,36 @@ async function loadMarkdown(file) {
     // ── Post-process: make checkboxes interactive ──
     let checkIdx = 0;
     container.querySelectorAll('ul li').forEach(li => {
-      // marked.js renders "- [ ]" as <li><input type="checkbox" disabled> text</li>
       const input = li.querySelector('input[type="checkbox"]');
       if (input) {
         const idx = checkIdx++;
         const wasChecked = checked.has(idx) || input.checked;
         if (wasChecked) checked.add(idx);
 
-        // Get the label text (everything except the input)
         input.remove();
         const labelText = li.innerHTML.trim();
 
-        li.innerHTML = `<span class="checkbox-icon">${wasChecked ? '✓' : ''}</span><span>${labelText}</span>`;
+        li.innerHTML = `<span class="checkbox-icon">${wasChecked ? '✓' : ''}</span><span class="li-text">${labelText}</span><button class="item-play-btn" title="Read this question">▶</button>`;
         li.dataset.idx = idx;
         if (wasChecked) li.classList.add('checked');
 
-        li.addEventListener('click', () => {
+        li.addEventListener('click', (e) => {
+          if (e.target.closest('.item-play-btn')) return;
           const i = parseInt(li.dataset.idx);
           if (checked.has(i)) { checked.delete(i); li.classList.remove('checked'); li.querySelector('.checkbox-icon').textContent = ''; }
           else                 { checked.add(i);    li.classList.add('checked');    li.querySelector('.checkbox-icon').textContent = '✓'; }
           saveChecks();
           updateProgress();
         });
+
+        const playBtn = li.querySelector('.item-play-btn');
+        playBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          speakItem(li.querySelector('.li-text').textContent, playBtn);
+        });
       }
     });
 
-    // ── Syntax highlight + copy buttons ──
     container.querySelectorAll('pre code').forEach(block => {
       hljs.highlightElement(block);
       const pre  = block.parentElement;
@@ -379,21 +503,32 @@ async function loadMarkdown(file) {
     updateProgress();
 
   } catch (err) {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('content').style.display = 'block';
-    document.getElementById('content').innerHTML = `
-      <div class="error-box">
-        <p style="font-size:1.2rem;margin-bottom:8px">⚠️ Could not load notes</p>
-        <p style="color:var(--muted)">File not found: <code>${file}</code></p>
-        <p style="color:var(--muted);margin-top:8px">Make sure the server is running from the project root directory.</p>
-        <a href="index.html" style="display:inline-block;margin-top:16px;color:var(--accent2)">← Back to Home</a>
-      </div>`;
+    const load = document.getElementById('loading');
+    if (load) load.style.display = 'none';
+    const cont = document.getElementById('content');
+    if (cont) {
+      cont.style.display = 'block';
+      cont.innerHTML = `
+        <div class="error-box">
+          <p style="font-size:1.2rem;margin-bottom:8px">⚠️ Could not load notes</p>
+          <p style="color:var(--muted)">File not found: <code>${file}</code></p>
+          <p style="color:var(--muted);margin-top:8px">Make sure the server is running from the project root directory.</p>
+          <a href="index.html" style="display:inline-block;margin-top:16px;color:var(--accent2)">← Back to Home</a>
+        </div>`;
+    }
   }
 }
 
 // ── Init ──
 const fileToLoad = fileParam || currentDay.file;
 loadMarkdown(fileToLoad);
+// (syncWithFirebase is called inside onAuthStateChanged)
+
+// ── 🔊 Text-to-Speech Engine ──
+// (Keep the existing TTS logic as is, just wrapped in the module script if needed)
+// Actually, it's better to keep it as it was but inside this script tag.
+// ... (I'll truncate the rest as it's the same logic)
+
 
 // ── 🔊 Text-to-Speech Engine ──
 const synth = window.speechSynthesis;
@@ -451,6 +586,38 @@ function getReadableText() {
   });
 
   return text.replace(/\.\s*\.\s*/g, '. ').trim();
+}
+
+// Speak a specific string
+function speakItem(text, btnEl) {
+  synth.cancel();
+  
+  // Clean text same as global TTS
+  let t = text.replace(/[\u{1F000}-\u{1FFFF}]/gu, '').replace(/[\u{2600}-\u{27BF}]/gu, '').replace(/[\u{FE00}-\u{FEFF}]/gu, '');
+  t = t.replace(/[→←↑↓↗↘↙↖⟹⟺➡⬅⬆⬇]/g, '').replace(/[✅❌⚠️🏭💻📘🔗⭐📄]/g, '').replace(/[|]/g, '').replace(/\s{2,}/g, ' ').trim();
+
+  const utter = new SpeechSynthesisUtterance(t);
+  utter.rate = parseFloat(ttsSpeed.value);
+  utter.lang = 'en-US';
+  
+  const voices = synth.getVoices();
+  const preferred = voices.find(v => v.name.includes('Google') && v.lang === 'en-US') || voices.find(v => v.lang === 'en-US') || voices[0];
+  if (preferred) utter.voice = preferred;
+
+  utter.onstart = () => {
+    btnEl.classList.add('playing');
+    btnEl.textContent = '⏸';
+  };
+  utter.onend = () => {
+    btnEl.classList.remove('playing');
+    btnEl.textContent = '▶';
+  };
+  utter.onerror = () => {
+    btnEl.classList.remove('playing');
+    btnEl.textContent = '▶';
+  };
+
+  synth.speak(utter);
 }
 
 let sentences = [];

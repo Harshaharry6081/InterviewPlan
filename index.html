@@ -99,6 +99,13 @@
     .card-link:hover { opacity:1; }
     .card-date { font-size:11px; color:var(--muted); margin-top:4px; }
 
+    /* Card Progress Bar */
+    .card-progress-wrap { margin-top: 15px; }
+    .card-progress-info { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .card-progress-bar { height: 4px; background: var(--surface2); border-radius: 10px; overflow: hidden; }
+    .card-progress-fill { height: 100%; background: var(--accent); transition: width 0.3s; width: 0%; }
+    .day-card.done .card-progress-fill { background: var(--green); }
+
     /* ── Progress Bar ── */
     .progress-wrap { margin-bottom:48px; }
     .progress-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
@@ -139,6 +146,7 @@
     ::-webkit-scrollbar-track { background:var(--bg); }
     ::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
   </style>
+  <!-- No manual script tags here, moving to type="module" at bottom -->
 </head>
 <body>
 
@@ -146,8 +154,18 @@
 
   <!-- Hero -->
   <div class="hero">
+    <div id="auth-section" style="margin-bottom: 20px;">
+        <button id="login-btn" class="badge" style="cursor:pointer; border:1px solid var(--accent); background:rgba(99,102,241,0.1);">
+            <span style="background:var(--yellow)"></span> Login with Google to Sync Progress
+        </button>
+        <div id="user-info" style="display:none; align-items:center; justify-content:center; gap:12px;">
+            <img id="user-photo" src="" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--accent);">
+            <span id="user-name" style="font-size:14px; font-weight:600;"></span>
+            <button id="logout-btn" style="background:none; border:none; color:var(--red); font-size:12px; cursor:pointer; text-decoration:underline;">Logout</button>
+        </div>
+    </div>
     <div class="badge"><span></span> Accenture · SkillInterview · Virtual</div>
-    <h1>Hey Harshavardhan 👋<br>Let's Crack Accenture!</h1>
+    <h1>Hey <span id="display-name">Harshavardhan</span> 👋<br>Let's Crack Accenture!</h1>
     <p class="subtitle">Custom Software Engineer · Spring Boot · Microservices · May 13 @ 4:00 PM IST</p>
 
     <div class="countdown">
@@ -227,7 +245,11 @@
   <a href="https://www.baeldung.com/spring-interview-questions" target="_blank">Spring Framework Q&amp;A</a>
 </footer>
 
-<script>
+<script type="module">
+  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getDatabase, ref, set, get, onValue, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+
   // ── Data ──
   const days = [
     { day:1, date:"May 2",  title:"Core Java 8+",          items:48, src:"java-interview", tags:["Streams","HashMap","JVM","Concurrency"],       file:"Day01-CoreJava/notes.md" },
@@ -244,11 +266,74 @@
     { day:"🎯",date:"May 13",title:"INTERVIEW DAY",         tags:["You've got this! 🚀"],                                                          file:"resources/cheatsheets/quick-reference.md", special:true },
   ];
 
-  // ── LocalStorage for progress ──
+  // ── Firebase Setup ──
+  const firebaseConfig = {
+    apiKey: "AIzaSyB_toM9EnF6_afyMI2GWvCcVj2xiW96PLA",
+    authDomain: "interviewplan3-5.firebaseapp.com",
+    projectId: "interviewplan3-5",
+    storageBucket: "interviewplan3-5.firebasestorage.app",
+    messagingSenderId: "227712805345",
+    appId: "1:227712805345:web:49267d05d9857fe2d20aa0",
+    measurementId: "G-E9JB03B6S8"
+  };
+
+  const app = getApps().find(a => a.name === 'books') || initializeApp(firebaseConfig, 'books');
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  let currentUser = null;
+
   const STORAGE_KEY = 'interview_prep_done';
   let done = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 
-  function saveProgress() { localStorage.setItem(STORAGE_KEY, JSON.stringify(done)); }
+  // ── Auth Logic ──
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      currentUser = user;
+      document.getElementById('login-btn').style.display = 'none';
+      document.getElementById('user-info').style.display = 'flex';
+      document.getElementById('user-photo').src = user.photoURL;
+      document.getElementById('user-name').textContent = user.displayName;
+      document.getElementById('display-name').textContent = user.displayName.split(' ')[0];
+      syncWithFirebase();
+    } else {
+      currentUser = null;
+      document.getElementById('login-btn').style.display = 'inline-flex';
+      document.getElementById('user-info').style.display = 'none';
+      document.getElementById('display-name').textContent = "Harshavardhan";
+    }
+  });
+
+  document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
+  document.getElementById('logout-btn').onclick = () => signOut(auth);
+
+  async function syncWithFirebase() {
+    if (!currentUser) return;
+    const progressRef = ref(db, `users/${currentUser.uid}/overall_progress`);
+    onValue(progressRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.doneDays) {
+        // Merge local and remote
+        const remoteDone = data.doneDays;
+        done = [...new Set([...done, ...remoteDone])];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(done));
+        renderCards();
+        updateProgress();
+      }
+    });
+  }
+
+  async function saveProgress(sync = true) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(done));
+    if (sync && currentUser) {
+      set(ref(db, `users/${currentUser.uid}/overall_progress`), {
+        doneDays: done,
+        lastUpdated: serverTimestamp()
+      });
+    }
+  }
+
   function isDone(d) { return done.includes(d); }
 
   function toggleDay(d) {
@@ -262,6 +347,7 @@
   // ── Render Cards ──
   function renderCards() {
     const grid = document.getElementById('days-grid');
+    if (!grid) return;
     grid.innerHTML = '';
     const srcColors = {
       'java-interview':'rgba(99,102,241,0.18)',
@@ -277,12 +363,35 @@
       'behavioral':    '🤝 behavioral',
       'all':           '⭐ all sources'
     };
+    
+    const dayCounts = JSON.parse(localStorage.getItem('interview_day_counts') || '{}');
+
     days.forEach(d => {
       const el = document.createElement('div');
       const finished = isDone(d.day);
       el.className = `day-card${finished ? ' done' : ''}${d.special ? ' interview-day' : ''}`;
+      
       const srcBadge = d.src ? `<span style="font-size:10px;padding:2px 7px;border-radius:100px;background:${srcColors[d.src]||'rgba(99,102,241,0.1)'};color:var(--muted)">${srcLabels[d.src]||d.src}</span>` : '';
       const itemsBadge = d.items ? `<span style="font-size:10px;padding:2px 7px;border-radius:100px;background:rgba(52,211,153,0.1);color:var(--green);border:1px solid rgba(52,211,153,0.2)">${d.items} items</span>` : '';
+      
+      // Granular progress info
+      let progressHtml = '';
+      if (!d.special) {
+        const stats = dayCounts[d.day] || { done: 0, total: d.items || 0 };
+        const pct = stats.total ? Math.round((stats.done / stats.total) * 100) : 0;
+        progressHtml = `
+          <div class="card-progress-wrap">
+            <div class="card-progress-info">
+              <span>Progress</span>
+              <span>${stats.done} / ${stats.total}</span>
+            </div>
+            <div class="card-progress-bar">
+              <div class="card-progress-fill" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        `;
+      }
+
       el.innerHTML = `
         <div class="card-top">
           <div>
@@ -294,6 +403,7 @@
         <div class="card-title">${d.title}</div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">${srcBadge}${itemsBadge}</div>
         <div class="card-tags">${d.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+        ${progressHtml}
         <a class="card-link" href="day.html?file=${d.file}" onclick="event.stopPropagation()">📄 Open Notes →</a>
       `;
       if (!d.special) el.addEventListener('click', () => toggleDay(d.day));
@@ -303,13 +413,27 @@
 
   // ── Update Progress ──
   function updateProgress() {
-    const total = days.filter(d => !d.special).length;
-    const count = done.length;
-    const pct = Math.round((count / total) * 100);
-    document.getElementById('pct-label').textContent = pct + '%';
-    setTimeout(() => {
-      document.getElementById('progress-fill').style.width = pct + '%';
-    }, 100);
+    const dayCounts = JSON.parse(localStorage.getItem('interview_day_counts') || '{}');
+    let totalItems = 0;
+    let completedItems = 0;
+
+    days.forEach(d => {
+      if (!d.special) {
+        const stats = dayCounts[d.day] || { done: 0, total: d.items || 0 };
+        totalItems += stats.total;
+        completedItems += stats.done;
+      }
+    });
+
+    const pct = totalItems ? Math.round((completedItems / totalItems) * 100) : 0;
+    const pctLabel = document.getElementById('pct-label');
+    const progFill = document.getElementById('progress-fill');
+    if (pctLabel) pctLabel.textContent = pct + '%';
+    if (progFill) {
+      setTimeout(() => {
+        progFill.style.width = pct + '%';
+      }, 100);
+    }
   }
 
   // ── Countdown Timer ──
@@ -318,17 +442,24 @@
     const now = new Date();
     let diff = target - now;
     if (diff < 0) {
-      document.querySelector('.countdown').innerHTML = '<div style="font-size:1.4rem;font-weight:700;color:var(--yellow)">🎯 You are in your interview right now! Give it your best, Harshavardhan! 💪</div>';
+      const cd = document.querySelector('.countdown');
+      if (cd) cd.innerHTML = '<div style="font-size:1.4rem;font-weight:700;color:var(--yellow)">🎯 You are in your interview right now! Give it your best, Harshavardhan! 💪</div>';
       return;
     }
     const d = Math.floor(diff / 86400000);
     const h = Math.floor((diff % 86400000) / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
     const s = Math.floor((diff % 60000) / 1000);
-    document.getElementById('cd-days').textContent  = String(d).padStart(2,'0');
-    document.getElementById('cd-hours').textContent = String(h).padStart(2,'0');
-    document.getElementById('cd-min').textContent   = String(m).padStart(2,'0');
-    document.getElementById('cd-sec').textContent   = String(s).padStart(2,'0');
+    
+    const cdDays = document.getElementById('cd-days');
+    const cdHours = document.getElementById('cd-hours');
+    const cdMin = document.getElementById('cd-min');
+    const cdSec = document.getElementById('cd-sec');
+    
+    if (cdDays) cdDays.textContent  = String(d).padStart(2,'0');
+    if (cdHours) cdHours.textContent = String(h).padStart(2,'0');
+    if (cdMin) cdMin.textContent   = String(m).padStart(2,'0');
+    if (cdSec) cdSec.textContent   = String(s).padStart(2,'0');
   }
 
   // ── Init ──

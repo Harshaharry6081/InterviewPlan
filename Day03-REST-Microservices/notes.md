@@ -1,105 +1,121 @@
 # 📘 Day 3 — REST APIs & Microservices (May 4th)
-
-> **Source alignment:** [enhorse/java-interview](https://github.com/enhorse/java-interview) · Web Basics, REST, Microservices sections
-
----
-
-## ✅ Master Checklist
-
-### 🔷 HTTP & Web Basics
-- [ ] What is HTTP vs HTTPS? How does TLS handshake work?
-- [ ] What are the HTTP methods? Which are idempotent? Which are safe?
-- [ ] What is the difference between PUT and PATCH?
-- [ ] What is the difference between GET and POST?
-- [ ] Know all HTTP status code families: 1xx, 2xx, 3xx, 4xx, 5xx.
-- [ ] What is CORS? How do you enable it in Spring Boot?
-- [ ] What is a cookie vs a session vs a JWT token?
-- [ ] What is the difference between Authentication and Authorization?
-- [ ] What is OAuth 2.0? What is OpenID Connect?
-- [ ] What is a WebSocket? When to use it over REST?
-- [ ] What is content negotiation (Accept header)?
-- [ ] What is `application/json` vs `application/xml`?
-- [ ] What is HATEOAS? What REST maturity level does it represent?
-
-### 🔷 RESTful API Design
-- [ ] What are the 6 REST architectural constraints?
-- [ ] What is "stateless" in REST?
-- [ ] How do you design URLs? (nouns not verbs, plural resources)
-- [ ] How do you version a REST API? (URI `/v1/`, Header, Accept header)
-- [ ] How do you implement pagination? (`page`, `size`, `sort` params)
-- [ ] How do you design error responses? (consistent error body structure)
-- [ ] What is an idempotency key? Why is it important for POST?
-- [ ] What is request throttling / rate limiting?
-- [ ] What is an API contract? What is OpenAPI / Swagger?
-
-### 🔷 Microservices Architecture
-- [ ] What is a Microservice? How is it different from a monolith?
-- [ ] What are the advantages of microservices? Disadvantages?
-- [ ] What is Domain-Driven Design (DDD)? What is a Bounded Context?
-- [ ] What is an API Gateway? What problems does it solve?
-- [ ] What is Service Discovery? How does Eureka work?
-- [ ] What is a Load Balancer? Client-side vs Server-side load balancing.
-- [ ] What is the Circuit Breaker pattern? States: CLOSED, OPEN, HALF-OPEN.
-- [ ] What is Resilience4j? Key annotations: `@CircuitBreaker`, `@Retry`, `@TimeLimiter`.
-- [ ] What is the Bulkhead pattern?
-- [ ] What is the Saga pattern? Choreography vs Orchestration.
-- [ ] What is the Strangler Fig pattern?
-- [ ] What is the Sidecar pattern?
-- [ ] What is a service mesh? (Istio, Linkerd)
-- [ ] What is gRPC? When to prefer it over REST?
-- [ ] How do microservices handle distributed transactions?
-- [ ] What is eventual consistency?
-- [ ] What is the Outbox pattern?
-- [ ] How do you propagate authentication tokens between microservices?
-
-### 🔷 Communication Patterns
-- [ ] Synchronous vs Asynchronous communication — when to use each?
-- [ ] What is request-response vs event-driven?
-- [ ] What is a Dead Letter Queue (DLQ)? When does a message go to DLQ?
-- [ ] What is idempotent message processing? Why is it critical?
+> **Format:** Question → Detailed Answer → 🏭 Real-World Use → 💻 Code
 
 ---
 
-## 📝 Key Code to Write from Memory
+## 🔷 HTTP & REST Fundamentals
 
-```java
-// 1. CORS configuration in Spring Boot
-@Configuration
-public class CorsConfig {
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("https://myapp.com"));
-        config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
-}
+- [ ] **What is the difference between PUT and PATCH?**
 
-// 2. Circuit Breaker with Resilience4j
-@CircuitBreaker(name = "inventoryService", fallbackMethod = "inventoryFallback")
-@Retry(name = "inventoryService")
-public Integer checkStock(Long productId) {
-    return inventoryClient.getStock(productId);
-}
+  **PUT** is for **full updates**. It replaces the entire resource. If you send a PUT request with only one field, the rest of the fields in the DB might be set to null or default.
+  **PATCH** is for **partial updates**. It only modifies the fields you send, leaving others untouched.
 
-public Integer inventoryFallback(Long productId, Throwable t) {
-    log.warn("Inventory service down, returning cached value");
-    return redisTemplate.opsForValue().get("stock:" + productId);
-}
+  🏭 **Real World:** If a user wants to change *only* their profile picture, use `PATCH /users/1`. If you're updating a whole "Order" object with all its lines and addresses, use `PUT /orders/1`.
 
-// 3. Consistent error response structure
-public record ErrorResponse(
-    String code,
-    String message,
-    Instant timestamp,
-    String path
-) {}
-```
+  ```java
+  // Spring Boot Controller handling PATCH
+  @PatchMapping("/{id}")
+  public ResponseEntity<User> updatePartially(@PathVariable Long id, @RequestBody Map<String, Object> fields) {
+      User user = repository.findById(id).orElseThrow();
+      fields.forEach((key, value) -> {
+          Field field = ReflectionUtils.findField(User.class, key);
+          field.setAccessible(true);
+          ReflectionUtils.setField(field, user, value);
+      });
+      return ResponseEntity.ok(repository.save(user));
+  }
+  ```
 
 ---
 
-## 🔗 Reference
-- [enhorse/java-interview — Web Basics](https://github.com/enhorse/java-interview/blob/master/web.md)
+- [ ] **Which HTTP methods are Idempotent? Why does it matter?**
+
+  An operation is **idempotent** if making the same request multiple times has the same effect as making it once.
+
+  | Method | Idempotent? | Safe? |
+  |---|---|---|
+  | `GET` | ✅ Yes | ✅ Yes |
+  | `POST` | ❌ No | ❌ No |
+  | `PUT` | ✅ Yes | ❌ No |
+  | `DELETE` | ✅ Yes | ❌ No |
+  | `PATCH` | ❌ No (usually) | ❌ No |
+
+  🏭 **Real World:** If a "Payment" request (`POST /payments`) times out, the client doesn't know if it succeeded. If they retry, they might be charged twice!
+  **Fix:** Use an `Idempotency-Key` header. The server stores the key for 24h; if a second request arrives with the same key, it returns the cached response instead of processing again.
+
+---
+
+- [ ] **JWT vs Session Authentication — which to use for Microservices?**
+
+  **Session-based:** Server stores session ID in memory/DB. State is on the server. Hard to scale (requires sticky sessions or shared Redis).
+  **JWT (Token-based):** Stateless. All user info is inside the signed token. Server just validates the signature. Perfect for scaling microservices.
+
+  🏭 **Real World:** In a microservice mesh, the **API Gateway** validates the JWT once, then passes the user identity (`user-id`, `roles`) to downstream services via headers. Downstream services don't need to call a central "Auth Service" for every request.
+
+---
+
+## 🔷 Microservices Patterns
+
+- [ ] **What is a Circuit Breaker? (Resilience4j)**
+
+  Prevents a "cascading failure". If Service A calls Service B and Service B is slow/down, Service A's threads will hang, eventually crashing Service A too.
+  The Circuit Breaker "trips" (opens) after X failures, immediately returning a **fallback** instead of calling the failing service.
+
+  **States:**
+  1. `CLOSED`: Normal operation.
+  2. `OPEN`: Service failing, calls blocked.
+  3. `HALF_OPEN`: Test calls to see if service recovered.
+
+  ```java
+  @CircuitBreaker(name = "paymentService", fallbackMethod = "paymentFallback")
+  public String processPayment(Order order) {
+      return restTemplate.postForObject("http://payment-service/pay", order, String.class);
+  }
+
+  public String paymentFallback(Order order, Throwable t) {
+      return "Payment Service is currently busy. Your order is queued.";
+  }
+  ```
+
+---
+
+- [ ] **Saga Pattern: How to handle transactions across microservices?**
+
+  Since microservices have private DBs, you can't use `@Transactional` across them. Saga manages this as a sequence of local transactions.
+
+  1. **Choreography:** Services exchange events. A → B → C. (Simple, but hard to track).
+  2. **Orchestration:** A central "Orchestrator" tells each service what to do. (Complex, but easy to monitor).
+
+  🏭 **Real World:** **Order Fulfillment Saga**:
+  - `OrderService` reserves order.
+  - `PaymentService` charges card.
+  - `InventoryService` picks items.
+  - If `InventoryService` fails → **Compensating Transaction**: `PaymentService` issues a refund and `OrderService` cancels order.
+
+---
+
+- [ ] **API Gateway vs Service Discovery (Eureka)**
+
+  **Eureka:** The "Phonebook". Every microservice registers its IP/Port here.
+  **API Gateway (Spring Cloud Gateway):** The "Front Door". It handles routing, security (JWT), rate limiting, and logging. It looks up service IPs in Eureka to route requests.
+
+---
+
+## 🔷 Communication Patterns
+
+- [ ] **When to use Feign Client vs Kafka?**
+
+  **Feign Client (REST):** Synchronous. Use when you need an **immediate response** (e.g., checking if a user exists during login).
+  **Kafka (Messaging):** Asynchronous. Use for **fire-and-forget** or background tasks (e.g., sending an email, updating analytics, generating a report).
+
+  🏭 **Real World:** When a user places an order:
+  - Call `InventoryService` via **Feign** (must ensure items are in stock NOW).
+  - Publish `OrderPlaced` event to **Kafka** (email service and shipping service will consume this whenever they are ready).
+
+---
+
+## 🔗 Study References
+- [Baeldung — Spring Cloud Gateway](https://www.baeldung.com/spring-cloud-gateway)
+- [Baeldung — Resilience4j Guide](https://www.baeldung.com/resilience4j)
+- [Microservices.io — Saga Pattern](https://microservices.io/patterns/data/saga.html)
+- [Auth0 — JWT Introduction](https://auth0.com/learn/json-web-tokens/)

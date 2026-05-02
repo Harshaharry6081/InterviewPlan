@@ -1,173 +1,158 @@
 # 📘 Day 5 — LLD & Design Patterns (May 6th)
-
-> **Source alignment:** [ashishps1/awesome-low-level-design](https://github.com/ashishps1/awesome-low-level-design) — Complete coverage of all patterns and problems
-
----
-
-## ✅ Master Checklist
-
-### 🔷 SOLID Principles (Must explain each with Java example)
-- [ ] **S** — Single Responsibility Principle: One class, one reason to change.
-- [ ] **O** — Open/Closed Principle: Open for extension, closed for modification.
-- [ ] **L** — Liskov Substitution Principle: Subtypes must be substitutable for their parent.
-- [ ] **I** — Interface Segregation Principle: Many small interfaces > one fat interface.
-- [ ] **D** — Dependency Inversion Principle: Depend on abstractions, not concretions.
-
-### 🔷 Creational Patterns
-- [ ] **Singleton** — Only one instance. Thread-safe double-checked locking. Enum Singleton.
-- [ ] **Factory Method** — Subclasses decide which class to instantiate.
-- [ ] **Abstract Factory** — Family of related objects without specifying concrete classes.
-- [ ] **Builder** — Step-by-step construction of complex objects. (Lombok `@Builder`)
-- [ ] **Prototype** — Clone existing objects instead of creating new ones.
-
-### 🔷 Structural Patterns
-- [ ] **Adapter** — Bridge between incompatible interfaces.
-- [ ] **Decorator** — Add behaviour dynamically without modifying the class.
-- [ ] **Facade** — Simplified interface to a complex subsystem.
-- [ ] **Proxy** — Surrogate / placeholder (Spring AOP uses this!).
-- [ ] **Composite** — Tree structures where individual and composites are treated uniformly.
-- [ ] **Bridge** — Decouple abstraction from implementation.
-- [ ] **Flyweight** — Share common data to reduce memory (String Pool is an example).
-
-### 🔷 Behavioral Patterns
-- [ ] **Strategy** — Interchangeable algorithms. (e.g., sorting strategies, payment methods)
-- [ ] **Observer** — One-to-many dependency. Publisher/Subscriber. (Spring `@EventListener`)
-- [ ] **Command** — Encapsulate a request as an object. Supports undo/redo.
-- [ ] **Template Method** — Skeleton algorithm in base class, steps overridden in subclass.
-- [ ] **Chain of Responsibility** — Pass request through a chain of handlers. (Spring Filter chain)
-- [ ] **State** — Object behaviour changes based on internal state.
-- [ ] **Iterator** — Sequential access to elements without exposing internal structure.
-- [ ] **Mediator** — Central object that handles communication between objects.
+> **Goal:** Bridge the gap between "knowing the name" and "writing the code".
 
 ---
 
-## ✅ LLD Design Problems — Practice Each One
+## 🔷 SOLID Principles
 
-### From [awesome-low-level-design](https://github.com/ashishps1/awesome-low-level-design):
+- [ ] **S — Single Responsibility Principle (SRP)**
+  A class should have only ONE reason to change.
+  🏭 **Real World:** Don't put SQL queries, Email sending, and PDF generation all in `OrderService`. Split them: `OrderRepository`, `EmailService`, `ReportGenerator`.
 
-#### Tier 1 — Must Practice (Most Common in Interviews)
-- [ ] 🅿️ **Parking Lot** — Vehicles, Spots (Small/Medium/Large), Ticket, Payment
-- [ ] 🎬 **BookMyShow** — Movie, Theater, Screen, Seat, Booking
-- [ ] 🛒 **Shopping Cart / E-Commerce** — Product, Cart, Order, Payment Strategy
-- [ ] 🏧 **ATM Machine** — Card, Account, Transaction, State pattern
-- [ ] 🚗 **Ride Sharing (Uber/Ola)** — Driver, Rider, Trip, Pricing Strategy
+- [ ] **O — Open/Closed Principle (OCP)**
+  Software entities should be open for extension, but closed for modification.
+  🏭 **Real World:** If you add a new payment method (e.g., Crypto), you shouldn't have to modify the `PaymentProcessor`'s `if/else` block. Instead, implement a `PaymentStrategy` interface.
 
-#### Tier 2 — Good to Practice
-- [ ] 📚 **Library Management System** — Book, Member, Loan, Search
-- [ ] 🏨 **Hotel Booking System** — Room, Reservation, Guest
-- [ ] 🍕 **Food Delivery (Zomato/Swiggy)** — Restaurant, Menu, Order, DeliveryAgent
-- [ ] ♟️ **Chess Game** — Board, Piece hierarchy, Move validation
-- [ ] 🚦 **Traffic Signal Controller** — State pattern with timer
+- [ ] **L — Liskov Substitution Principle (LSP)**
+  Subtypes must be substitutable for their base types without breaking the app.
+  ❌ **Bad Example:** A `Square` class extending `Rectangle`. If you set width=10 and height=5 on a `Rectangle` reference, it works. If that reference is actually a `Square`, setting width might change height, breaking the "Rectangle" contract.
 
-#### Tier 3 — Nice to Know
-- [ ] 💬 **Chat Application** — User, Group, Message, Observer pattern
-- [ ] 📦 **Inventory Management** — Product, Stock, Supplier
-- [ ] 🏋️ **Gym Management System** — Member, Trainer, Slot, Subscription
+- [ ] **I — Interface Segregation Principle (ISP)**
+  Clients shouldn't be forced to depend on methods they don't use.
+  🏭 **Real World:** Instead of one `SmartDevice` interface with `print()`, `fax()`, `scan()`, split them into `Printer`, `Fax`, and `Scanner` interfaces.
 
----
-
-## 📝 Template — How to Answer ANY LLD Question
-
-```
-Step 1: Clarify Requirements (2 min)
-  → "What are the actors / users of this system?"
-  → "What are the core use cases?"
-  → "Any constraints I should know?"
-
-Step 2: Identify Core Entities (2 min)
-  → List the main classes/objects needed
-
-Step 3: Define Relationships (2 min)
-  → Has-a (composition) vs Is-a (inheritance)
-  → Cardinality: one-to-many, many-to-many
-
-Step 4: Apply Design Patterns (3 min)
-  → "I'll use Strategy for payment types"
-  → "Observer for notifications"
-  → "Factory for creating vehicles"
-
-Step 5: Write the Code (10+ min)
-  → Start with interfaces/abstractions
-  → Implement concrete classes
-  → Wire them in a main/service class
-```
+- [ ] **D — Dependency Inversion Principle (DIP)**
+  Depend on abstractions (interfaces), not concretions (classes).
+  🏭 **Real World:** `OrderService` should depend on `PaymentService` (interface), not `PayPalPaymentService` (class). Spring's Dependency Injection (DI) is the tool we use to achieve DIP.
 
 ---
 
-## 📝 Parking Lot — Full Solution Skeleton
+## 🔷 Creational Patterns
+
+- [ ] **Singleton Pattern**
+  Ensures a class has only one instance.
+  🏭 **Real World:** Spring Beans are singletons by default.
+  ```java
+  // Double-checked locking (Thread-safe)
+  public class DatabaseConnection {
+      private static volatile DatabaseConnection instance;
+      private DatabaseConnection() {}
+      public static DatabaseConnection getInstance() {
+          if (instance == null) {
+              synchronized (DatabaseConnection.class) {
+                  if (instance == null) instance = new DatabaseConnection();
+              }
+          }
+          return instance;
+      }
+  }
+  ```
+
+- [ ] **Builder Pattern**
+  For objects with many optional parameters.
+  🏭 **Real World:** In Spring Boot, we use Lombok's `@Builder`.
+  ```java
+  @Builder
+  public class User {
+      private String name;
+      private String email;
+      private int age; // optional
+  }
+  // Usage: User.builder().name("Harsh").email("h@g.com").build();
+  ```
+
+---
+
+## 🔷 Structural Patterns
+
+- [ ] **Adapter Pattern**
+  Converts one interface to another that the client expects.
+  🏭 **Real World:** Integrating a 3rd party legacy library into your modern Spring app. You create an Adapter class that implements your internal interface but calls the legacy methods inside.
+
+- [ ] **Proxy Pattern**
+  A placeholder for another object to control access (security, logging, lazy loading).
+  🏭 **Real World:** Spring's `@Transactional` and `@Cacheable` use **Dynamic Proxies**. When you call a method, you're actually calling the Proxy, which starts the transaction/checks the cache, then calls your real method.
+
+---
+
+## 🔷 Behavioral Patterns
+
+- [ ] **Strategy Pattern**
+  Defines a family of algorithms, encapsulates each one, and makes them interchangeable.
+  🏭 **Real World:** Routing logic or Payment logic.
+  ```java
+  public interface ShippingStrategy {
+      double calculate(double weight);
+  }
+
+  @Service
+  public class FedExStrategy implements ShippingStrategy { ... }
+
+  @Service
+  public class DHLStrategy implements ShippingStrategy { ... }
+
+  // Context
+  public class OrderProcessor {
+      private ShippingStrategy strategy;
+      public void setStrategy(ShippingStrategy s) { this.strategy = s; }
+  }
+  ```
+
+- [ ] **Observer Pattern**
+  One-to-many relationship where state change in one object notifies all observers.
+  🏭 **Real World:** Spring's `ApplicationEvent` system.
+  ```java
+  // 1. Define event
+  public class OrderPlacedEvent extends ApplicationEvent { ... }
+
+  // 2. Publish event
+  publisher.publishEvent(new OrderPlacedEvent(order));
+
+  // 3. Listen to event (Observer)
+  @EventListener
+  public void handleOrder(OrderPlacedEvent event) {
+      emailService.send(event.getOrder());
+  }
+  ```
+
+---
+
+## 📝 LLD Design Problem: BookMyShow Skeleton
 
 ```java
-// Enums
-enum VehicleType { MOTORCYCLE, CAR, TRUCK }
-enum SpotStatus { AVAILABLE, OCCUPIED }
-
-// Entities
-class Vehicle {
-    private String plate;
-    private VehicleType type;
+// Focus on relationships and core logic
+class Theater {
+    private List<Screen> screens;
 }
 
-class ParkingSpot {
-    private int id;
-    private VehicleType supportedType;  // MOTORCYCLE supports all, LARGE supports TRUCK
-    private SpotStatus status = SpotStatus.AVAILABLE;
-    private Vehicle vehicle;
-
-    public boolean canFit(Vehicle v) {
-        return switch(v.getType()) {
-            case MOTORCYCLE -> true;
-            case CAR -> supportedType == VehicleType.CAR || supportedType == VehicleType.TRUCK;
-            case TRUCK -> supportedType == VehicleType.TRUCK;
-        };
-    }
+class Screen {
+    private List<Seat> seats;
 }
 
-class Ticket {
-    private String id;
-    private Vehicle vehicle;
-    private ParkingSpot spot;
-    private LocalDateTime entryTime;
+class Show {
+    private Movie movie;
+    private Screen screen;
+    private LocalDateTime startTime;
+    private Map<Seat, SeatStatus> seatStatus; // Key to LLD: track seat availability per show
 }
 
-// Strategy for pricing
-interface PricingStrategy {
-    double calculate(VehicleType type, long hours);
-}
-class HourlyPricing implements PricingStrategy { ... }
-class DailyCapPricing implements PricingStrategy { ... }
-
-// Main Lot (Singleton)
-class ParkingLot {
-    private static ParkingLot instance;
-    private List<ParkingSpot> spots;
-    private PricingStrategy pricing;
-
-    private ParkingLot() { ... }
-    public static synchronized ParkingLot getInstance() {
-        if (instance == null) instance = new ParkingLot();
-        return instance;
-    }
-
-    public Ticket park(Vehicle vehicle) {
-        ParkingSpot spot = spots.stream()
-            .filter(s -> s.getStatus() == SpotStatus.AVAILABLE && s.canFit(vehicle))
-            .findFirst()
-            .orElseThrow(() -> new RuntimeException("Lot is full!"));
-        spot.setVehicle(vehicle);
-        spot.setStatus(SpotStatus.OCCUPIED);
-        return new Ticket(vehicle, spot, LocalDateTime.now());
-    }
-
-    public double checkout(Ticket ticket) {
-        long hours = ChronoUnit.HOURS.between(ticket.getEntryTime(), LocalDateTime.now());
-        ticket.getSpot().setStatus(SpotStatus.AVAILABLE);
-        return pricing.calculate(ticket.getVehicle().getType(), hours);
+class Booking {
+    private Show show;
+    private List<Seat> selectedSeats;
+    private User user;
+    private BookingStatus status;
+    
+    public void confirm() {
+        // 1. Validate seats are still available
+        // 2. Process payment
+        // 3. Update seatStatus in Show
     }
 }
 ```
 
 ---
 
-## 🔗 Reference
-- [ashishps1/awesome-low-level-design](https://github.com/ashishps1/awesome-low-level-design)
-- [SOLID principles with Java examples](https://www.baeldung.com/solid-principles)
+## 🔗 Study References
+- [Refactoring.Guru — Design Patterns](https://refactoring.guru/design-patterns)
+- [Baeldung — SOLID Principles](https://www.baeldung.com/solid-principles)
+- [Baeldung — Spring Design Patterns](https://www.baeldung.com/spring-framework-design-patterns)
