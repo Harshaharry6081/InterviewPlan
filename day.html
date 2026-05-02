@@ -498,7 +498,7 @@ async function loadMarkdown(file) {
           synth.cancel(); 
           // UI reset is handled by utter.onend
         } else {
-          speakItem(li.querySelector('.li-text').textContent, pBtn);
+          speakItem(li.querySelector('.li-text'), pBtn);
         }
       });
     });
@@ -603,13 +603,22 @@ function getReadableText() {
   return text.replace(/\.\s*\.\s*/g, '. ').trim();
 }
 
-// Speak a specific string
-function speakItem(text, btnEl) {
+// Speak a specific string or element content (strips code blocks)
+function speakItem(input, btnEl) {
   ttsStop(); // Stop global reader if running
   synth.cancel();
   
-  // Clean text same as global TTS
-  let t = text.replace(/[\u{1F000}-\u{1FFFF}]/gu, '').replace(/[\u{2600}-\u{27BF}]/gu, '').replace(/[\u{FE00}-\u{FEFF}]/gu, '');
+  let rawText = "";
+  if (typeof input === 'string') {
+    rawText = input;
+  } else if (input instanceof HTMLElement) {
+    const clone = input.cloneNode(true);
+    clone.querySelectorAll('pre, code, .hljs, .code-wrap').forEach(el => el.remove());
+    rawText = clone.textContent;
+  }
+
+  // Clean text (remove symbols, emojis, etc.)
+  let t = rawText.replace(/[\u{1F000}-\u{1FFFF}]/gu, '').replace(/[\u{2600}-\u{27BF}]/gu, '').replace(/[\u{FE00}-\u{FEFF}]/gu, '');
   t = t.replace(/[→←↑↓↗↘↙↖⟹⟺➡⬅⬆⬇]/g, '').replace(/[✅❌⚠️🏭💻📘🔗⭐📄]/g, '').replace(/[|]/g, '').replace(/\s{2,}/g, ' ').trim();
 
   const utter = new SpeechSynthesisUtterance(t);
