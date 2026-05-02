@@ -5,11 +5,17 @@
 ---
 
 ## ✅ Checklist
-- [ ] Core AWS vs Azure service equivalents
-- [ ] Centralized logging (ELK Stack / Loki)
-- [ ] Metrics & Alerting (Prometheus + Grafana)
-- [ ] Distributed Tracing (Micrometer Tracing / Zipkin)
-- [ ] Terraform basics (IaC)
+
+- [ ] **Core AWS vs Azure service equivalents**
+  → Know the basics: EC2/VM, S3/Blob, RDS/SQL DB, Lambda/Functions.
+- [ ] **Centralized logging (ELK Stack / Loki)**
+  → Ship all logs to a central place (Elasticsearch/Grafana Loki) so you can search them across all microservice instances.
+- [ ] **Metrics & Alerting (Prometheus + Grafana)**
+  → **Prometheus** scrapes numeric data (CPU, req/sec). **Grafana** visualizes it. Set alerts for high error rates.
+- [ ] **Distributed Tracing (Micrometer Tracing / Zipkin)**
+  → Tracks a single request as it flows through 5+ microservices. Essential for finding bottlenecks.
+- [ ] **Terraform basics (IaC)**
+  → Infrastructure as Code. Define your servers/DBs in code so they are version-controlled and repeatable.
 
 ---
 

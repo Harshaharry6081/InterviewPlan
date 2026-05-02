@@ -6,9 +6,24 @@
 
 ## 🔷 Database Fundamentals
 
-- [ ] **What are ACID properties?** — **Atomicity**: all-or-nothing (if one step fails, entire transaction rolls back). **Consistency**: DB moves from one valid state to another (constraints respected). **Isolation**: concurrent transactions don't see each other's intermediate state. **Durability**: committed data survives crashes (written to disk/WAL).
+- [ ] **What are ACID properties?**
 
-- [ ] **Dirty read vs Non-repeatable read vs Phantom read?** — **Dirty read**: reading uncommitted data from another transaction (data may be rolled back). **Non-repeatable read**: reading the same row twice in a transaction gets different values (another tx updated it). **Phantom read**: re-running a query gives different rows (another tx inserted/deleted rows).
+  **Atomicity**: all-or-nothing (if one step fails, entire transaction rolls back).
+  **Consistency**: DB moves from one valid state to another (constraints respected).
+  **Isolation**: concurrent transactions don't see each other's intermediate state.
+  **Durability**: committed data survives crashes (written to disk/WAL).
+
+  🏭 **Real World:** If you transfer money from Account A to B, and the server crashes after deducting from A but before adding to B, **Atomicity** ensures the deduction is undone.
+
+---
+
+- [ ] **Dirty read vs Non-repeatable read vs Phantom read?**
+
+  **Dirty read**: reading uncommitted data from another transaction (data may be rolled back).
+  **Non-repeatable read**: reading the same row twice in a transaction gets different values (another tx updated it).
+  **Phantom read**: re-running a query gives different rows (another tx inserted/deleted rows).
+
+---
 
 - [ ] **4 SQL Isolation Levels?**
   - `READ UNCOMMITTED`: dirty reads possible (almost never used)
@@ -16,9 +31,19 @@
   - `REPEATABLE READ`: no dirty or non-repeatable reads (MySQL default)
   - `SERIALIZABLE`: safest, prevents all anomalies, slowest
 
-- [ ] **What is optimistic vs pessimistic locking?** — **Optimistic**: no lock acquired. Check at commit time that data wasn't changed (using `@Version` in Hibernate). Good for low-conflict scenarios. **Pessimistic**: lock row when read (`SELECT FOR UPDATE`). Prevents others from reading/writing. Use for high-conflict critical sections.
+- [ ] **What is optimistic vs pessimistic locking?**
 
-- [ ] **How does Hibernate implement optimistic locking?** — Add `@Version` field (`int` or `Long`). Hibernate includes `WHERE version = ?` in UPDATE. If another transaction already updated it, version won't match → throws `OptimisticLockException`.
+  **Optimistic**: No lock acquired. Check at commit time that data wasn't changed (using `@Version` in Hibernate). Good for low-conflict scenarios.
+  **Pessimistic**: Lock row when read (`SELECT FOR UPDATE`). Prevents others from reading/writing. Use for high-conflict critical sections (e.g., inventory deduction).
+
+  ```java
+  // Hibernate Optimistic Locking
+  @Entity
+  public class Account {
+      @Id private Long id;
+      @Version private Integer version; // Hibernate handles this automatically
+  }
+  ```
 
 ---
 

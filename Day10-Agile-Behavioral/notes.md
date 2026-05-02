@@ -5,10 +5,15 @@
 ---
 
 ## ✅ Checklist
-- [ ] Agile/Scrum terminology
-- [ ] Prepare 5 STAR-format behavioral answers
-- [ ] Questions to ask the interviewer
-- [ ] Resume talking points
+
+- [ ] **Agile/Scrum terminology**
+  → Understand Sprints, Standups, Velocity, and Story Points.
+- [ ] **Prepare 5 STAR-format behavioral answers**
+  → Situation, Task, Action, Result. Have stories for: Conflict, Challenge, Achievement, Learning, Pressure.
+- [ ] **Questions to ask the interviewer**
+  → Shows you are thinking about the long-term culture and tech (e.g., "How does the team handle tech debt?").
+- [ ] **Resume talking points**
+  → Be ready to explain EVERY line on your resume. If you listed Kafka, know how many partitions you used!
 
 ---
 

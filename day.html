@@ -449,37 +449,58 @@ async function loadMarkdown(file) {
     document.getElementById('loading').style.display = 'none';
     container.style.display = 'block';
 
-    // ── Post-process: make checkboxes interactive ──
+    // ── Post-process: make interactive ──
     let checkIdx = 0;
-    container.querySelectorAll('ul li').forEach(li => {
+    container.querySelectorAll('ul li, ol li').forEach(li => {
       const input = li.querySelector('input[type="checkbox"]');
-      if (input) {
-        const idx = checkIdx++;
-        const wasChecked = checked.has(idx) || input.checked;
-        if (wasChecked) checked.add(idx);
+      const isCheckable = !!input;
+      
+      const idx = checkIdx++;
+      const wasChecked = isCheckable ? (checked.has(idx) || input.checked) : false;
+      if (isCheckable && wasChecked) checked.add(idx);
 
-        input.remove();
-        const labelText = li.innerHTML.trim();
+      if (isCheckable) input.remove();
+      const labelText = li.innerHTML.trim();
 
-        li.innerHTML = `<span class="checkbox-icon">${wasChecked ? '✓' : ''}</span><span class="li-text">${labelText}</span><button class="item-play-btn" title="Read this question">▶</button>`;
-        li.dataset.idx = idx;
-        if (wasChecked) li.classList.add('checked');
+      // Wrap content and add play button
+      li.innerHTML = `
+        <span class="checkbox-icon">${isCheckable ? (wasChecked ? '✓' : '') : ''}</span>
+        <span class="li-text">${labelText}</span>
+        <button class="item-play-btn" title="Read this">▶</button>
+      `;
+      li.dataset.idx = idx;
+      if (isCheckable && wasChecked) li.classList.add('checked');
 
-        li.addEventListener('click', (e) => {
-          if (e.target.closest('.item-play-btn')) return;
-          const i = parseInt(li.dataset.idx);
-          if (checked.has(i)) { checked.delete(i); li.classList.remove('checked'); li.querySelector('.checkbox-icon').textContent = ''; }
-          else                 { checked.add(i);    li.classList.add('checked');    li.querySelector('.checkbox-icon').textContent = '✓'; }
-          saveChecks();
-          updateProgress();
-        });
+      // Click to toggle checkbox (if applicable)
+      li.addEventListener('click', (e) => {
+        if (e.target.closest('.item-play-btn')) return;
+        if (!isCheckable) return;
+        
+        const i = parseInt(li.dataset.idx);
+        if (checked.has(i)) { 
+          checked.delete(i); 
+          li.classList.remove('checked'); 
+          li.querySelector('.checkbox-icon').textContent = ''; 
+        } else { 
+          checked.add(i);    
+          li.classList.add('checked');    
+          li.querySelector('.checkbox-icon').textContent = '✓'; 
+        }
+        saveChecks();
+        updateProgress();
+      });
 
-        const playBtn = li.querySelector('.item-play-btn');
-        playBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          speakItem(li.querySelector('.li-text').textContent, playBtn);
-        });
-      }
+      // TTS Play button
+      const pBtn = li.querySelector('.item-play-btn');
+      pBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (pBtn.classList.contains('playing')) {
+          synth.cancel(); 
+          // UI reset is handled by utter.onend
+        } else {
+          speakItem(li.querySelector('.li-text').textContent, pBtn);
+        }
+      });
     });
 
     container.querySelectorAll('pre code').forEach(block => {
@@ -523,12 +544,6 @@ async function loadMarkdown(file) {
 const fileToLoad = fileParam || currentDay.file;
 loadMarkdown(fileToLoad);
 // (syncWithFirebase is called inside onAuthStateChanged)
-
-// ── 🔊 Text-to-Speech Engine ──
-// (Keep the existing TTS logic as is, just wrapped in the module script if needed)
-// Actually, it's better to keep it as it was but inside this script tag.
-// ... (I'll truncate the rest as it's the same logic)
-
 
 // ── 🔊 Text-to-Speech Engine ──
 const synth = window.speechSynthesis;
@@ -590,6 +605,7 @@ function getReadableText() {
 
 // Speak a specific string
 function speakItem(text, btnEl) {
+  ttsStop(); // Stop global reader if running
   synth.cancel();
   
   // Clean text same as global TTS

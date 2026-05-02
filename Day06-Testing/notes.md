@@ -5,11 +5,17 @@
 ---
 
 ## ✅ Checklist
-- [ ] JUnit 5 annotations and assertions
-- [ ] Mockito (mocking, stubbing, verification)
-- [ ] Integration testing with @SpringBootTest
-- [ ] Testcontainers (real DB in tests)
-- [ ] Test coverage mindset
+
+- [ ] **JUnit 5 annotations and assertions**
+  → `@Test`, `@BeforeEach`, `@AfterEach`. Use `assertEquals`, `assertThrows` for validation.
+- [ ] **Mockito (mocking, stubbing, verification)**
+  → Use `@Mock` for dependencies, `when(...).thenReturn(...)` to stub, and `verify(...)` to check interactions.
+- [ ] **Integration testing with @SpringBootTest**
+  → Loads the full application context. Use `TestRestTemplate` or `MockMvc` to test API endpoints.
+- [ ] **Testcontainers (real DB in tests)**
+  → Spins up a Docker container (Postgres/Redis) for tests, ensuring they run against a real environment, not just H2.
+- [ ] **Test coverage mindset**
+  → Aim for 80%+ coverage, but focus on testing business logic and edge cases, not just getters/setters.
 
 ---
 

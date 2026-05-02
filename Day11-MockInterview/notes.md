@@ -17,12 +17,23 @@
 
 ### Round 1: Technical Screening (15 min)
 
-1. Walk me through your experience with Spring Boot.
-2. What is the difference between `@Service` and `@Repository`?
-3. Explain how `@Transactional` works.
-4. What is the N+1 problem and how do you fix it?
-5. What HTTP status code do you return when creating a resource?
-6. How is `HashMap` different from `ConcurrentHashMap`?
+1. **Walk me through your experience with Spring Boot.**
+   → "I have worked with Spring Boot for X years, primarily focusing on building RESTful microservices. I'm proficient in dependency injection, auto-configuration, and using starters like Spring Data JPA and Spring Security. In my last project, I [mention a specific achievement, e.g., optimized DB queries or implemented Kafka integration]."
+
+2. **What is the difference between `@Service` and `@Repository`?**
+   → Both are `@Component` specializations. `@Service` is for business logic and doesn't add extra functionality. `@Repository` is for the data access layer and enables automatic translation of vendor-specific database exceptions into Spring's `DataAccessException` hierarchy.
+
+3. **Explain how `@Transactional` works.**
+   → It uses Spring AOP (proxies). When a method is called, the proxy starts a transaction, executes the method, and then commits (or rolls back if a `RuntimeException` occurs). It abstracts away the complex JDBC transaction management code.
+
+4. **What is the N+1 problem and how do you fix it?**
+   → It happens when you fetch a parent entity and then fetch its children one by one in a loop (1 query for parents + N queries for children). Fix it using **Join Fetch** in JPQL, **Entity Graphs**, or by setting the fetch mode to subselect.
+
+5. **What HTTP status code do you return when creating a resource?**
+   → `201 Created`. Usually accompanied by a `Location` header pointing to the new resource.
+
+6. **How is `HashMap` different from `ConcurrentHashMap`?**
+   → `HashMap` is not thread-safe and can lead to infinite loops or data corruption under concurrent access. `ConcurrentHashMap` is thread-safe and uses **segment-level locking** (or CAS in Java 8+) to allow multiple threads to read/write simultaneously without locking the whole map.
 
 ### Round 2: System Design (20 min)
 

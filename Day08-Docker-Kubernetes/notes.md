@@ -5,11 +5,17 @@
 ---
 
 ## ✅ Checklist
-- [ ] Write a production-ready Dockerfile
-- [ ] docker-compose.yml for local dev
-- [ ] Kubernetes core objects (Pod, Deployment, Service)
-- [ ] ConfigMaps and Secrets
-- [ ] Health checks and resource limits
+
+- [ ] **Write a production-ready Dockerfile**
+  → Use **Multi-stage builds** to keep images small. Run as a non-root user for security.
+- [ ] **docker-compose.yml for local dev**
+  → Defines your app + DB + Redis + Kafka as a single stack for easy local testing.
+- [ ] **Kubernetes core objects (Pod, Deployment, Service)**
+  **Pod**: Smallest unit. **Deployment**: Manages replicas/rollouts. **Service**: Stable IP/DNS for pods.
+- [ ] **ConfigMaps and Secrets**
+  → Decouple configuration (ConfigMap) and sensitive data (Secrets) from the container image.
+- [ ] **Health checks and resource limits**
+  → **Liveness/Readiness probes** for auto-healing. **CPU/Memory limits** to prevent one container from crashing the node.
 
 ---
 

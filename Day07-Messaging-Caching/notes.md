@@ -5,10 +5,15 @@
 ---
 
 ## ✅ Checklist
-- [ ] Kafka Core Concepts (Topics, Partitions, Consumer Groups)
-- [ ] Spring Kafka (Producer & Consumer)
-- [ ] Redis Caching (Cache-Aside Pattern, Eviction)
-- [ ] When to use sync vs async communication
+
+- [ ] **Kafka Core Concepts (Topics, Partitions, Consumer Groups)**
+  → **Topics** are logs, **Partitions** allow parallelism, **Consumer Groups** ensure each message is processed once by the group.
+- [ ] **Spring Kafka (Producer & Consumer)**
+  → Use `KafkaTemplate` to send and `@KafkaListener` to receive. Handles JSON serialization/deserialization automatically.
+- [ ] **Redis Caching (Cache-Aside Pattern, Eviction)**
+  → **Cache-Aside**: Check Redis → if miss, read DB → write to Redis. **Eviction**: Automatic removal of old data (LRU).
+- [ ] **When to use sync vs async communication**
+  → **Sync (REST)**: Immediate response needed (e.g., login). **Async (Kafka)**: High throughput, decoupling, background tasks (e.g., email notification).
 
 ---
 
