@@ -1,0 +1,1951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Java DSA — 30-Day Interview Mastery</title>
+  <meta name="description" content="Full-featured DSA practice app with 40-minute timer, problem tracker, pattern cheatsheet, and progress dashboard." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+/* ═══════════════════════════════════════════════════════════════
+   BASE RESET + DESIGN TOKENS
+═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #07070f;
+  --bg2:     #0d0d1a;
+  --bg3:     #121224;
+  --card:    #16162e;
+  --card2:   #1c1c38;
+  --border:  rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.14);
+
+  --accent:  #6c63ff;
+  --accent2: #a855f7;
+  --accent3: #06b6d4;
+  --green:   #10b981;
+  --yellow:  #f59e0b;
+  --red:     #ef4444;
+  --orange:  #f97316;
+
+  --text:    #e2e8f0;
+  --text2:   #94a3b8;
+  --text3:   #4b5563;
+
+  --r: 12px;
+  --r-sm: 8px;
+  --r-lg: 18px;
+  --glow: 0 0 40px rgba(108,99,255,0.25);
+
+  --timer-color: var(--accent3);
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+button { font-family: inherit; cursor: pointer; border: none; }
+textarea, input { font-family: inherit; }
+
+/* ═══════════════════════════════════════════════════════════════
+   DECORATIVE BACKGROUND
+═══════════════════════════════════════════════════════════════ */
+#bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(108,99,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(108,99,255,0.03) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+.orb {
+  position: fixed; border-radius: 50%; filter: blur(90px);
+  pointer-events: none; z-index: 0; animation: orbFloat 12s ease-in-out infinite alternate;
+}
+.orb-a { width:600px;height:600px; background:rgba(108,99,255,.1); top:-200px; right:-150px; }
+.orb-b { width:400px;height:400px; background:rgba(168,85,247,.07); bottom:0; left:-100px; animation-delay:-6s; }
+.orb-c { width:300px;height:300px; background:rgba(6,182,212,.06); top:50%; left:50%; animation-delay:-3s; }
+@keyframes orbFloat { from { transform:translate(0,0) scale(1); } to { transform:translate(30px,20px) scale(1.08); } }
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT SHELL
+═══════════════════════════════════════════════════════════════ */
+#shell {
+  position: relative; z-index: 1;
+  display: grid;
+  grid-template-rows: 56px 1fr;
+  grid-template-columns: 220px 1fr;
+  grid-template-areas: "header header" "nav main";
+  min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOP HEADER BAR
+═══════════════════════════════════════════════════════════════ */
+#topbar {
+  grid-area: header;
+  background: rgba(7,7,15,0.9);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  position: sticky; top: 0; z-index: 200;
+}
+
+.tb-logo { display:flex; align-items:center; gap:10px; }
+.tb-logo .logo-icon {
+  width:32px; height:32px; border-radius:8px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display:grid; place-items:center; font-size:16px;
+  box-shadow: 0 0 14px rgba(108,99,255,.5);
+}
+.tb-logo h1 { font-size:14px; font-weight:700; color:var(--text); letter-spacing:-.3px; }
+.tb-logo span { font-size:11px; color:var(--text3); margin-left:4px; }
+
+.tb-right { display:flex; align-items:center; gap:12px; }
+
+.streak-badge {
+  display:flex; align-items:center; gap:6px;
+  background: rgba(249,115,22,0.12); border:1px solid rgba(249,115,22,0.25);
+  border-radius:20px; padding:4px 12px; font-size:12px; font-weight:600; color:var(--orange);
+}
+
+.day-badge {
+  display:flex; align-items:center; gap:6px;
+  background: var(--card); border:1px solid var(--border);
+  border-radius:20px; padding:4px 12px; font-size:12px; font-weight:600;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SIDEBAR NAV
+═══════════════════════════════════════════════════════════════ */
+#sidebar {
+  grid-area: nav;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  padding: 16px 12px;
+  display: flex; flex-direction: column; gap: 2px;
+  position: sticky; top: 56px; height: calc(100vh - 56px); overflow-y: auto;
+}
+
+.nav-section-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text3); padding: 12px 8px 6px; font-weight: 600;
+}
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: var(--r-sm);
+  cursor: pointer; border: 1px solid transparent;
+  transition: all 0.2s; font-size: 13px; font-weight: 500; color: var(--text2);
+}
+.nav-item:hover { background: var(--card); color: var(--text); border-color: var(--border); }
+.nav-item.active {
+  background: linear-gradient(135deg, rgba(108,99,255,0.18), rgba(168,85,247,0.12));
+  border-color: rgba(108,99,255,0.3); color: var(--text);
+}
+.nav-item .ni-icon { font-size:16px; flex-shrink:0; }
+.nav-item .ni-badge {
+  margin-left:auto; background:var(--accent); border-radius:10px;
+  padding:1px 7px; font-size:10px; color:#fff; font-weight:700;
+}
+
+.sidebar-timer {
+  margin-top: auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MAIN CONTENT AREA
+═══════════════════════════════════════════════════════════════ */
+#main {
+  grid-area: main;
+  padding: 28px;
+  overflow-y: auto;
+}
+
+.page { display: none; }
+.page.active { display: block; }
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION TITLE
+═══════════════════════════════════════════════════════════════ */
+.section-title {
+  font-size: 22px; font-weight: 800; margin-bottom: 6px;
+  background: linear-gradient(135deg, #fff 40%, var(--accent));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.section-sub { font-size: 13px; color: var(--text2); margin-bottom: 28px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   40-MINUTE PRACTICE TIMER  ← THE STAR FEATURE
+═══════════════════════════════════════════════════════════════ */
+#timerModal {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s;
+}
+#timerModal.open { opacity: 1; pointer-events: all; }
+
+.timer-modal-box {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-lg);
+  padding: 40px 48px;
+  width: min(520px, 95vw);
+  text-align: center;
+  position: relative;
+}
+
+.timer-modal-close {
+  position: absolute; top: 16px; right: 16px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text2); padding: 6px 10px; font-size: 18px;
+}
+.timer-modal-close:hover { color: var(--text); border-color: var(--border2); }
+
+.timer-problem-tag {
+  display: inline-block; margin-bottom: 20px;
+  background: rgba(108,99,255,0.15); border: 1px solid rgba(108,99,255,0.3);
+  border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 600; color: var(--accent);
+}
+
+.timer-modal-box h2 {
+  font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text);
+}
+
+/* SVG ring timer */
+.ring-timer-wrap {
+  position: relative; display: inline-block; margin: 24px 0;
+}
+
+#ringTimer {
+  transform: rotate(-90deg);
+  filter: drop-shadow(0 0 16px rgba(6,182,212,0.4));
+}
+#ringBg { fill:none; stroke: rgba(255,255,255,0.06); stroke-width:10; }
+#ringFill { fill:none; stroke-width:10; stroke-linecap:round; transition: stroke 0.3s; }
+
+.timer-digits {
+  position: absolute; top:50%; left:50%; transform: translate(-50%,-50%);
+  text-align: center;
+}
+.timer-mm { font-size: 52px; font-weight: 800; font-family: 'JetBrains Mono', monospace; line-height: 1; }
+.timer-ss { font-size: 24px; font-weight: 600; font-family: 'JetBrains Mono', monospace; color: var(--text2); }
+.timer-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+.timer-status { font-size: 13px; color: var(--text2); margin-bottom: 20px; min-height: 20px; }
+
+.timer-controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+.btn {
+  padding: 10px 22px; border-radius: var(--r-sm); font-size: 14px; font-weight: 600;
+  transition: all 0.2s;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff; box-shadow: 0 4px 14px rgba(108,99,255,0.35);
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(108,99,255,0.45); }
+.btn-ghost {
+  background: var(--card); border: 1px solid var(--border); color: var(--text2);
+}
+.btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+.btn-danger { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: var(--red); }
+.btn-danger:hover { background: rgba(239,68,68,0.22); }
+.btn-success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: var(--green); }
+.btn-success:hover { background: rgba(16,185,129,0.22); }
+.btn-sm { padding: 7px 14px; font-size: 12px; }
+
+/* Timer presets */
+.timer-presets { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap; }
+.preset-btn {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 600; color: var(--text2);
+  cursor: pointer; transition: all 0.2s;
+}
+.preset-btn:hover, .preset-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(108,99,255,0.1); }
+
+/* Mini timer in sidebar */
+.mini-timer {
+  text-align: center;
+}
+.mini-timer-title { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.mini-timer-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px; font-weight: 800;
+  color: var(--accent3);
+  margin-bottom: 8px;
+  transition: color 0.3s;
+}
+.mini-timer-display.warning { color: var(--yellow); animation: warnPulse 1s infinite; }
+.mini-timer-display.danger  { color: var(--red);    animation: warnPulse 0.5s infinite; }
+@keyframes warnPulse { 0%,100%{opacity:1;} 50%{opacity:.5;} }
+
+.mini-timer-bar {
+  height: 4px; background: rgba(255,255,255,0.06); border-radius: 100px; overflow: hidden; margin-bottom: 10px;
+}
+.mini-timer-fill {
+  height: 100%; border-radius: 100px; background: var(--accent3);
+  transition: width 1s linear, background 0.3s;
+}
+.mini-timer-btns { display: flex; gap: 6px; }
+.mini-timer-btns button {
+  flex: 1; padding: 6px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+}
+.mini-timer-btns button:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ═══════════════════════════════════════════════════════════════
+   DASHBOARD PAGE
+═══════════════════════════════════════════════════════════════ */
+.dash-stats-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px; margin-bottom: 28px;
+}
+.stat-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 20px;
+  transition: all 0.25s;
+}
+.stat-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+.stat-card .sc-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.stat-card .sc-value { font-size: 32px; font-weight: 800; }
+.stat-card .sc-sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+.grad-purple { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.grad-cyan   { background: linear-gradient(135deg, var(--accent3), var(--green));   -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.grad-orange { background: linear-gradient(135deg, var(--yellow), var(--orange));   -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.grad-green  { background: linear-gradient(135deg, var(--green), var(--accent3));   -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+
+/* Overall progress bar */
+.overall-bar-wrap {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 28px;
+}
+.obw-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+.obw-header h3 { font-size:15px; font-weight:700; }
+.obw-pct { font-size:22px; font-weight:800; }
+.progress-track { background:rgba(255,255,255,.05); border-radius:100px; height:10px; overflow:hidden; }
+.progress-fill {
+  height:100%; border-radius:100px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+  transition: width 1s ease;
+  position:relative; overflow:hidden;
+}
+.progress-fill::after {
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  animation: shimmer 2s infinite;
+}
+@keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+
+/* Day calendar */
+.cal-grid {
+  display: grid; grid-template-columns: repeat(10, 1fr);
+  gap: 8px; margin-bottom: 28px;
+}
+@media(max-width:900px){ .cal-grid{ grid-template-columns: repeat(6,1fr); } }
+.cal-cell {
+  aspect-ratio:1; border-radius: var(--r-sm);
+  background: var(--card); border: 1px solid var(--border);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  cursor:pointer; transition: all 0.2s; position:relative; overflow:hidden;
+  user-select:none;
+}
+.cal-cell::before {
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  opacity:0; transition:opacity 0.2s;
+}
+.cal-cell:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(108,99,255,0.2); border-color:var(--accent); }
+.cal-cell:hover::before { opacity:0.08; }
+.cal-cell.done { border-color:var(--green); }
+.cal-cell.done::before { opacity:0.08; background:linear-gradient(135deg,var(--green),var(--accent3)); }
+.cal-cell.today { border-color:var(--accent); box-shadow:0 0 16px rgba(108,99,255,0.3); }
+.cal-cell.today::before { opacity:0.12; }
+.cal-cell.mock { border-color:var(--orange); }
+.cal-n { position:relative; font-size:18px; font-weight:800; color:var(--text3); }
+.cal-cell.done .cal-n { color:var(--green); }
+.cal-cell.today .cal-n { color:var(--accent); }
+.cal-cell.mock .cal-n { color:var(--orange); }
+.cal-lbl { position:relative; font-size:8px; color:var(--text3); text-transform:uppercase; margin-top:2px; letter-spacing:.3px; }
+.cal-check { position:absolute; top:5px; right:5px; width:14px; height:14px; border-radius:50%; background:var(--green); display:none; align-items:center; justify-content:center; font-size:9px; }
+.cal-cell.done .cal-check { display:flex; }
+
+/* Week cards */
+.week-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin-bottom:28px; }
+.week-card {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:20px;
+  transition:all 0.25s; cursor:pointer;
+}
+.week-card:hover { border-color:var(--border2); transform:translateY(-3px); box-shadow:var(--glow); }
+.wc-tag { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; padding:3px 9px; border-radius:20px; }
+.wc-w1 { background:rgba(108,99,255,.15); color:var(--accent); }
+.wc-w2 { background:rgba(6,182,212,.15); color:var(--accent3); }
+.wc-w3 { background:rgba(168,85,247,.15); color:var(--accent2); }
+.wc-w4 { background:rgba(249,115,22,.15); color:var(--orange); }
+.wc-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.wc-emoji { font-size:22px; }
+.week-card h4 { font-size:15px; font-weight:700; margin-bottom:4px; }
+.week-card p { font-size:12px; color:var(--text2); margin-bottom:12px; line-height:1.6; }
+.wc-mini-bar { height:5px; background:rgba(255,255,255,.05); border-radius:100px; overflow:hidden; }
+.wc-mini-fill { height:100%; border-radius:100px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width 1s; }
+
+/* ═══════════════════════════════════════════════════════════════
+   PRACTICE PAGE
+═══════════════════════════════════════════════════════════════ */
+.practice-layout {
+  display: grid; grid-template-columns: 320px 1fr; gap: 20px;
+}
+@media(max-width:900px){ .practice-layout{grid-template-columns:1fr;} }
+
+/* Problem list panel */
+.prob-panel {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r);
+  overflow: hidden; display: flex; flex-direction: column;
+  max-height: calc(100vh - 120px); position: sticky; top: 80px;
+}
+.prob-panel-header {
+  padding: 16px 18px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.prob-panel-header h3 { font-size: 14px; font-weight: 700; }
+.prob-count { font-size: 12px; color: var(--text3); }
+
+.prob-filter {
+  padding: 12px 12px; border-bottom: 1px solid var(--border);
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.filter-btn {
+  padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  background: var(--bg3); border: 1px solid var(--border); color: var(--text3);
+  cursor: pointer; transition: all 0.15s;
+}
+.filter-btn:hover { border-color: var(--border2); color: var(--text2); }
+.filter-btn.on { border-color: var(--accent); color: var(--accent); background: rgba(108,99,255,0.1); }
+
+.prob-list { overflow-y: auto; flex: 1; }
+.prob-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: all 0.15s;
+}
+.prob-item:hover { background: var(--card2); }
+.prob-item.selected { background: rgba(108,99,255,0.1); border-left: 2px solid var(--accent); }
+.prob-item.solved { opacity: 0.7; }
+
+.prob-status {
+  width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+  border: 1.5px solid var(--border2); display: grid; place-items: center; font-size: 10px;
+}
+.prob-item.solved .prob-status { background: var(--green); border-color: var(--green); color: #fff; }
+
+.prob-info { flex: 1; min-width: 0; }
+.prob-name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prob-meta { font-size: 11px; color: var(--text3); margin-top: 1px; }
+
+.diff-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; flex-shrink: 0;
+}
+.diff-easy   { background:rgba(16,185,129,.15); color:var(--green); }
+.diff-medium { background:rgba(245,158,11,.15); color:var(--yellow); }
+.diff-hard   { background:rgba(239,68,68,.15); color:var(--red); }
+
+/* Problem solver panel */
+.solver-panel {
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+.solver-header {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 20px 24px;
+}
+.sh-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px; }
+.sh-top h2 { font-size:18px; font-weight:700; }
+.sh-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+.prob-tags { display:flex; gap:6px; flex-wrap:wrap; }
+.prob-tag { font-size:11px; padding:3px 9px; border-radius:10px; border:1px solid var(--border2); color:var(--text2); font-family:'JetBrains Mono',monospace; }
+
+/* Template cards */
+.template-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; }
+.tpl-card {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:16px;
+}
+.tpl-label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.8px; margin-bottom:8px; font-weight:600; }
+.tpl-textarea {
+  width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:var(--r-sm);
+  color:var(--text); font-size:12px; padding:10px; resize:vertical; min-height:70px;
+  font-family:'JetBrains Mono',monospace; line-height:1.5;
+}
+.tpl-textarea:focus { outline:none; border-color:var(--accent); }
+
+.complexity-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.complexity-input {
+  background:var(--bg3); border:1px solid var(--border); border-radius:var(--r-sm);
+  color:var(--text); padding:8px 12px; font-size:13px; font-family:'JetBrains Mono',monospace; width:100%;
+}
+.complexity-input:focus { outline:none; border-color:var(--accent3); }
+
+.solve-actions { display:flex; gap:10px; flex-wrap:wrap; }
+
+/* ═══════════════════════════════════════════════════════════════
+   PATTERNS PAGE
+═══════════════════════════════════════════════════════════════ */
+.pattern-search {
+  width:100%; background:var(--card); border:1px solid var(--border); border-radius:var(--r-sm);
+  color:var(--text); padding:10px 16px; font-size:14px; margin-bottom:20px;
+}
+.pattern-search:focus { outline:none; border-color:var(--accent); }
+
+.patterns-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+.pat-card {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--r);
+  overflow:hidden; cursor:pointer; transition:all 0.25s;
+}
+.pat-card:hover { border-color:var(--border2); transform:translateY(-3px); }
+.pat-card-head {
+  display:flex; align-items:center; gap:12px; padding:16px 18px;
+  border-bottom:1px solid var(--border);
+}
+.pat-icon { font-size:24px; }
+.pat-card-head h4 { font-size:14px; font-weight:700; }
+.pat-card-head .pat-when { font-size:11px; color:var(--text2); margin-top:2px; }
+.pat-body { padding:14px 18px; }
+.pat-code {
+  background:var(--bg3); border-radius:var(--r-sm); padding:12px;
+  font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--accent3);
+  overflow-x:auto; white-space:pre; line-height:1.6; margin-bottom:10px;
+  border:1px solid var(--border);
+}
+.pat-problems { display:flex; flex-wrap:wrap; gap:5px; }
+.pat-prob { font-size:10px; padding:2px 7px; border-radius:8px; border:1px solid var(--border2); color:var(--text3); }
+
+/* ═══════════════════════════════════════════════════════════════
+   JAVA TOOLKIT PAGE
+═══════════════════════════════════════════════════════════════ */
+.jt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
+.jt-card {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--r); overflow:hidden;
+  transition:all 0.2s;
+}
+.jt-card:hover { border-color:var(--accent3); }
+.jt-header {
+  display:flex; align-items:center; justify-content:space-between; padding:14px 16px;
+  border-bottom:1px solid var(--border);
+}
+.jt-name { font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:600; color:var(--accent3); }
+.jt-type { font-size:11px; color:var(--text3); }
+.jt-body { padding:14px 16px; }
+.jt-code {
+  background:var(--bg3); border-radius:var(--r-sm); padding:10px 12px;
+  font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text2);
+  border:1px solid var(--border); white-space:pre; overflow-x:auto; line-height:1.7;
+}
+.complexity-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:10px; }
+.complexity-table th { text-align:left; color:var(--text3); padding:4px 8px; font-weight:600; font-size:11px; }
+.complexity-table td { padding:4px 8px; color:var(--text2); }
+.complexity-table tr:nth-child(even) td { background:rgba(255,255,255,.02); }
+.ok  { color:var(--green); font-weight:700; }
+.bad { color:var(--red); }
+.med { color:var(--yellow); }
+
+/* ═══════════════════════════════════════════════════════════════
+   MISTAKES PAGE
+═══════════════════════════════════════════════════════════════ */
+.mistake-form {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:24px; margin-bottom:24px;
+}
+.form-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-bottom:12px; }
+.form-label { font-size:12px; color:var(--text2); margin-bottom:5px; font-weight:600; }
+.form-input {
+  width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:var(--r-sm);
+  color:var(--text); padding:9px 12px; font-size:13px;
+}
+.form-input:focus { outline:none; border-color:var(--accent); }
+.mistake-list { display:flex; flex-direction:column; gap:12px; }
+.mistake-card {
+  background:var(--card); border:1px solid rgba(239,68,68,.2); border-left:3px solid var(--red);
+  border-radius:var(--r); padding:18px 20px;
+}
+.mc-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+.mc-title { font-size:14px; font-weight:700; }
+.mc-date { font-size:11px; color:var(--text3); }
+.mc-section { margin-bottom:8px; }
+.mc-label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.6px; margin-bottom:3px; }
+.mc-text { font-size:13px; color:var(--text2); }
+.mc-pattern { display:inline-block; background:rgba(108,99,255,.12); border:1px solid rgba(108,99,255,.3); border-radius:10px; padding:2px 9px; font-size:11px; color:var(--accent); }
+.delete-btn { background:none; border:none; color:var(--text3); font-size:16px; cursor:pointer; padding:2px 6px; border-radius:4px; }
+.delete-btn:hover { color:var(--red); background:rgba(239,68,68,.1); }
+
+/* ═══════════════════════════════════════════════════════════════
+   TOASTS + ALERTS
+═══════════════════════════════════════════════════════════════ */
+#toastContainer {
+  position:fixed; bottom:24px; right:24px; z-index:500;
+  display:flex; flex-direction:column; gap:8px;
+}
+.toast {
+  background:var(--card2); border:1px solid var(--border2); border-radius:var(--r-sm);
+  padding:12px 18px; font-size:13px; font-weight:500;
+  display:flex; align-items:center; gap:10px;
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.toast.success { border-left:3px solid var(--green); }
+.toast.warning { border-left:3px solid var(--yellow); }
+.toast.danger  { border-left:3px solid var(--red); }
+.toast.info    { border-left:3px solid var(--accent); }
+@keyframes toastIn  { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+@keyframes toastOut { from{opacity:1;transform:translateX(0)} to{opacity:0;transform:translateX(30px)} }
+
+/* Timer warning overlay */
+#timerWarning {
+  position:fixed; top:0; left:0; right:0; height:3px; z-index:999;
+  background:linear-gradient(90deg,var(--red),var(--orange));
+  display:none;
+  animation:warnFlash 1s infinite;
+}
+@keyframes warnFlash { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ═══════════════════════════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:var(--bg2); }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--accent); }
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE MOBILE
+═══════════════════════════════════════════════════════════════ */
+@media(max-width:700px){
+  #shell { grid-template-areas:"header" "main"; grid-template-columns:1fr; grid-template-rows:56px 1fr; }
+  #sidebar { display:none; }
+  #main { padding:16px; }
+  .timer-modal-box { padding:28px 20px; }
+  .timer-mm { font-size:40px; }
+}
+  </style>
+</head>
+<body>
+
+<!-- ── DECORATIVE ─────────────────────────────────────────── -->
+<div id="bg-grid"></div>
+<div class="orb orb-a"></div>
+<div class="orb orb-b"></div>
+<div class="orb orb-c"></div>
+
+<!-- ── TIMER WARNING BAR ──────────────────────────────────── -->
+<div id="timerWarning"></div>
+
+<!-- ── SHELL ──────────────────────────────────────────────── -->
+<div id="shell">
+
+  <!-- TOP BAR -->
+  <header id="topbar">
+    <div class="tb-logo">
+      <div class="logo-icon">☕</div>
+      <h1>Java DSA</h1>
+      <span>30-Day Sprint</span>
+    </div>
+    <div class="tb-right">
+      <div class="streak-badge">🔥 <span id="streakBadge">0</span> day streak</div>
+      <div class="day-badge">📅 Day <span id="dayBadge">1</span> / 30</div>
+      <button class="btn btn-primary btn-sm" id="openTimerBtn" onclick="openTimer()">⏱ Start 40-Min Session</button>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="nav-section-label">Navigation</div>
+    <div class="nav-item active" id="nav-dashboard" onclick="goPage('dashboard')">
+      <span class="ni-icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" id="nav-practice" onclick="goPage('practice')">
+      <span class="ni-icon">💻</span> Practice
+      <span class="ni-badge" id="navBadge">0</span>
+    </div>
+    <div class="nav-item" id="nav-patterns" onclick="goPage('patterns')">
+      <span class="ni-icon">🔍</span> Patterns
+    </div>
+    <div class="nav-item" id="nav-java" onclick="goPage('java')">
+      <span class="ni-icon">☕</span> Java Toolkit
+    </div>
+    <div class="nav-item" id="nav-mistakes" onclick="goPage('mistakes')">
+      <span class="ni-icon">❌</span> Mistakes
+    </div>
+
+    <div class="nav-section-label">Resources</div>
+    <div class="nav-item" onclick="window.open('https://takeuforward.org/dsa/strivers-a2z-sheet-learn-dsa-a-to-z','_blank')">
+      <span class="ni-icon">📋</span> Striver A2Z
+    </div>
+    <div class="nav-item" onclick="window.open('https://leetcode.com','_blank')">
+      <span class="ni-icon">🟡</span> LeetCode
+    </div>
+    <div class="nav-item" onclick="window.open('https://neetcode.io','_blank')">
+      <span class="ni-icon">🟢</span> NeetCode
+    </div>
+
+    <!-- Mini Timer -->
+    <div class="sidebar-timer">
+      <div class="mini-timer">
+        <div class="mini-timer-title">⏱ Practice Timer</div>
+        <div class="mini-timer-display" id="miniTimerDisplay">40:00</div>
+        <div class="mini-timer-bar"><div class="mini-timer-fill" id="miniTimerFill" style="width:100%"></div></div>
+        <div class="mini-timer-btns">
+          <button id="miniStartBtn" onclick="timerToggle()">▶ Start</button>
+          <button onclick="timerReset()">↺ Reset</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main id="main">
+
+    <!-- ════════════════ DASHBOARD PAGE ════════════════ -->
+    <div class="page active" id="page-dashboard">
+      <div class="section-title">Dashboard</div>
+      <div class="section-sub">Your 30-day Java DSA interview preparation progress</div>
+
+      <!-- Stats row -->
+      <div class="dash-stats-row">
+        <div class="stat-card">
+          <div class="sc-label">Days Done</div>
+          <div class="sc-value grad-purple" id="statDays">0</div>
+          <div class="sc-sub">out of 30 days</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">Problems Solved</div>
+          <div class="sc-value grad-cyan" id="statProbs">0</div>
+          <div class="sc-sub">out of <span id="statTotal">112</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">Current Streak</div>
+          <div class="sc-value grad-orange" id="statStreak">0</div>
+          <div class="sc-sub">days in a row 🔥</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">Sessions Done</div>
+          <div class="sc-value grad-green" id="statSessions">0</div>
+          <div class="sc-sub">40-min sessions</div>
+        </div>
+      </div>
+
+      <!-- Overall progress -->
+      <div class="overall-bar-wrap">
+        <div class="obw-header">
+          <h3>📈 Overall Progress</h3>
+          <span class="obw-pct grad-purple" id="overallPct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="overallFill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- 30-day calendar -->
+      <div class="section-title" style="font-size:17px; margin-bottom:14px;">🗓 30-Day Calendar</div>
+      <div class="cal-grid" id="calGrid"></div>
+
+      <!-- Week cards -->
+      <div class="section-title" style="font-size:17px; margin-bottom:14px;">📅 Weekly Plan</div>
+      <div class="week-row">
+        <div class="week-card" onclick="goPage('practice')">
+          <div class="wc-header"><span class="wc-tag wc-w1">Week 1</span><span class="wc-emoji">🏗️</span></div>
+          <h4>Foundations</h4>
+          <p>Arrays · Sorting · Strings · Hashing · Java Collections</p>
+          <div class="wc-mini-bar"><div class="wc-mini-fill" id="wfill1" style="width:0%"></div></div>
+        </div>
+        <div class="week-card" onclick="goPage('practice')">
+          <div class="wc-header"><span class="wc-tag wc-w2">Week 2</span><span class="wc-emoji">⚡</span></div>
+          <h4>Core Patterns</h4>
+          <p>Binary Search · Two Pointers · Sliding Window · Linked List · Stack/Queue</p>
+          <div class="wc-mini-bar"><div class="wc-mini-fill" id="wfill2" style="width:0%"></div></div>
+        </div>
+        <div class="week-card" onclick="goPage('practice')">
+          <div class="wc-header"><span class="wc-tag wc-w3">Week 3</span><span class="wc-emoji">🌳</span></div>
+          <h4>Trees + Heap</h4>
+          <p>Recursion · Backtracking · Binary Trees · BST · Heap/PriorityQueue</p>
+          <div class="wc-mini-bar"><div class="wc-mini-fill" id="wfill3" style="width:0%"></div></div>
+        </div>
+        <div class="week-card" onclick="goPage('practice')">
+          <div class="wc-header"><span class="wc-tag wc-w4">Week 4</span><span class="wc-emoji">🏆</span></div>
+          <h4>Advanced + Assessment</h4>
+          <p>Greedy · Graphs · Dynamic Programming · Mock Interviews</p>
+          <div class="wc-mini-bar"><div class="wc-mini-fill" id="wfill4" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════ PRACTICE PAGE ════════════════ -->
+    <div class="page" id="page-practice">
+      <div class="section-title">Practice Arena</div>
+      <div class="section-sub">Select a problem, start your timer, and solve it step by step</div>
+
+      <div class="practice-layout">
+        <!-- Problem list -->
+        <div class="prob-panel">
+          <div class="prob-panel-header">
+            <h3>Problems</h3>
+            <span class="prob-count"><span id="solvedCount">0</span> / <span id="totalCount">0</span> solved</span>
+          </div>
+          <div class="prob-filter" id="filterBar">
+            <span class="filter-btn on" data-f="all" onclick="applyFilter(this,'all')">All</span>
+            <span class="filter-btn" data-f="easy" onclick="applyFilter(this,'easy')">Easy</span>
+            <span class="filter-btn" data-f="medium" onclick="applyFilter(this,'medium')">Medium</span>
+            <span class="filter-btn" data-f="hard" onclick="applyFilter(this,'hard')">Hard</span>
+            <span class="filter-btn" data-f="unsolved" onclick="applyFilter(this,'unsolved')">Unsolved</span>
+          </div>
+          <div class="prob-list" id="probList"></div>
+        </div>
+
+        <!-- Solver -->
+        <div class="solver-panel" id="solverPanel">
+          <!-- Empty state -->
+          <div id="emptyState" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:60px;text-align:center;color:var(--text3);">
+            <div style="font-size:48px;margin-bottom:16px;">👈</div>
+            <div style="font-size:15px;font-weight:600;color:var(--text2);margin-bottom:6px;">Select a problem to start</div>
+            <div style="font-size:13px;">Choose from the list and hit Start Timer</div>
+          </div>
+
+          <!-- Solver card -->
+          <div id="solverCard" style="display:none;">
+            <div class="solver-header">
+              <div class="sh-top">
+                <div>
+                  <h2 id="spTitle">Problem Name</h2>
+                  <div class="prob-tags" id="spTags" style="margin-top:8px;"></div>
+                </div>
+                <div class="sh-actions">
+                  <span id="spDiff" class="diff-badge diff-easy">Easy</span>
+                  <button class="btn btn-primary btn-sm" onclick="openTimer()">⏱ 40 Min</button>
+                  <a id="spLink" href="#" target="_blank" class="btn btn-ghost btn-sm">🔗 LeetCode</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Solution template -->
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;">
+              <div style="font-size:14px;font-weight:700;margin-bottom:14px;">📝 Solution Template</div>
+              <div class="template-grid">
+                <div class="tpl-card">
+                  <div class="tpl-label">Pattern Identified</div>
+                  <textarea class="tpl-textarea" id="tp-pattern" placeholder="e.g. Two Pointer, Sliding Window, BFS..." rows="2"></textarea>
+                </div>
+                <div class="tpl-card">
+                  <div class="tpl-label">Brute Force Approach</div>
+                  <textarea class="tpl-textarea" id="tp-brute" placeholder="Describe your O(n²) approach..." rows="2"></textarea>
+                </div>
+                <div class="tpl-card">
+                  <div class="tpl-label">Optimal Approach</div>
+                  <textarea class="tpl-textarea" id="tp-optimal" placeholder="Describe the optimized solution..." rows="2"></textarea>
+                </div>
+                <div class="tpl-card">
+                  <div class="tpl-label">Why It Works</div>
+                  <textarea class="tpl-textarea" id="tp-why" placeholder="Explain the intuition..." rows="2"></textarea>
+                </div>
+              </div>
+
+              <div style="margin-top:14px;">
+                <div class="tpl-label" style="margin-bottom:8px;">Java Code</div>
+                <textarea class="tpl-textarea" id="tp-code" placeholder="// Write your Java solution here&#10;public int solve(int[] nums) {&#10;    &#10;}" rows="8" style="font-size:12px;min-height:160px;"></textarea>
+              </div>
+
+              <div style="margin-top:14px;">
+                <div class="tpl-label" style="margin-bottom:8px;">⏱ Complexity</div>
+                <div class="complexity-row">
+                  <div>
+                    <div class="tpl-label">Time Complexity</div>
+                    <input class="complexity-input" id="tp-time" type="text" placeholder="e.g. O(n log n)" />
+                  </div>
+                  <div>
+                    <div class="tpl-label">Space Complexity</div>
+                    <input class="complexity-input" id="tp-space" type="text" placeholder="e.g. O(n)" />
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:14px;">
+                <div class="tpl-label" style="margin-bottom:8px;">What I Got Wrong</div>
+                <textarea class="tpl-textarea" id="tp-wrong" placeholder="Any mistakes, edge cases missed, wrong assumptions..." rows="2"></textarea>
+              </div>
+
+              <div class="solve-actions" style="margin-top:16px;">
+                <button class="btn btn-success" onclick="markSolved()">✅ Mark Solved</button>
+                <button class="btn btn-ghost" onclick="saveNotes()">💾 Save Notes</button>
+                <button class="btn btn-danger" onclick="addToMistakes()">❌ Add to Mistakes</button>
+                <button class="btn btn-ghost btn-sm" onclick="clearForm()">🗑 Clear</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════ PATTERNS PAGE ════════════════ -->
+    <div class="page" id="page-patterns">
+      <div class="section-title">Interview Patterns</div>
+      <div class="section-sub">Recognize the pattern → Apply the template → Solve the problem</div>
+      <input class="pattern-search" id="patSearch" type="text" placeholder="🔍 Search patterns..." oninput="filterPatterns()" />
+      <div class="patterns-grid" id="patternGrid"></div>
+    </div>
+
+    <!-- ════════════════ JAVA TOOLKIT PAGE ════════════════ -->
+    <div class="page" id="page-java">
+      <div class="section-title">Java Collections Toolkit</div>
+      <div class="section-sub">Essential Java APIs for coding interviews — with complexity and code snippets</div>
+      <div class="jt-grid" id="jtGrid"></div>
+    </div>
+
+    <!-- ════════════════ MISTAKES PAGE ════════════════ -->
+    <div class="page" id="page-mistakes">
+      <div class="section-title">Mistakes Journal</div>
+      <div class="section-sub">Track every mistake. This is your most valuable file.</div>
+
+      <div class="mistake-form">
+        <div style="font-size:14px;font-weight:700;margin-bottom:14px;">➕ Add New Mistake</div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">Problem Name</div>
+            <input class="form-input" id="mf-prob" type="text" placeholder="e.g. Subarray Sum Equals K" />
+          </div>
+          <div>
+            <div class="form-label">Pattern</div>
+            <input class="form-input" id="mf-pattern" type="text" placeholder="e.g. Prefix Sum + HashMap" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">What I Tried (Wrong Approach)</div>
+            <input class="form-input" id="mf-tried" type="text" placeholder="Describe what you attempted..." />
+          </div>
+          <div>
+            <div class="form-label">Correct Approach</div>
+            <input class="form-input" id="mf-correct" type="text" placeholder="What should you have done..." />
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <div class="form-label">Key Pattern to Remember</div>
+          <input class="form-input" id="mf-key" type="text" placeholder="The single most important insight..." />
+        </div>
+        <button class="btn btn-primary" onclick="addMistake()">Add Mistake</button>
+      </div>
+
+      <div id="mistakesList"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── TIMER MODAL ─────────────────────────────────────────── -->
+<div id="timerModal">
+  <div class="timer-modal-box">
+    <button class="timer-modal-close" onclick="closeTimer()">✕</button>
+    <div class="timer-problem-tag" id="timerProblemTag">⏱ Practice Session</div>
+    <h2 id="timerProblemName">40-Minute Coding Round</h2>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:4px;">Stay focused. No peeking at solutions until the timer ends.</p>
+
+    <!-- Preset buttons -->
+    <div class="timer-presets" style="margin-top:14px;">
+      <button class="preset-btn" onclick="setPreset(15)">15 min</button>
+      <button class="preset-btn" onclick="setPreset(20)">20 min</button>
+      <button class="preset-btn active" onclick="setPreset(40)">40 min ⭐</button>
+      <button class="preset-btn" onclick="setPreset(60)">60 min</button>
+      <button class="preset-btn" onclick="setPreset(90)">90 min</button>
+    </div>
+
+    <!-- Ring timer -->
+    <div class="ring-timer-wrap">
+      <svg id="ringTimer" width="220" height="220" viewBox="0 0 220 220">
+        <circle id="ringBg" cx="110" cy="110" r="95"/>
+        <circle id="ringFill" cx="110" cy="110" r="95"
+          stroke="var(--accent3)"
+          stroke-dasharray="596.9"
+          stroke-dashoffset="0"/>
+      </svg>
+      <div class="timer-digits">
+        <div class="timer-mm" id="timerMM">40</div>
+        <div class="timer-ss" id="timerSS">:00</div>
+        <div class="timer-label" id="timerLabel">Ready</div>
+      </div>
+    </div>
+
+    <div class="timer-status" id="timerStatus">Set your timer and start the session.</div>
+
+    <div class="timer-controls">
+      <button class="btn btn-primary" id="mainTimerBtn" onclick="timerToggle()">▶ Start</button>
+      <button class="btn btn-ghost" onclick="timerReset()">↺ Reset</button>
+      <button class="btn btn-danger" onclick="closeTimer()">✕ Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST CONTAINER ────────────────────────────────────── -->
+<div id="toastContainer"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+   APPLICATION JAVASCRIPT
+═══════════════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ── STATE ────────────────────────────────────────────────────
+let state = {
+  currentDay: 1,
+  completedDays: new Set(),
+  solvedProblems: new Set(),
+  problemNotes: {},
+  mistakes: [],
+  sessions: 0,
+  currentProblem: null,
+  currentFilter: 'all',
+};
+
+// ── TIMER STATE ──────────────────────────────────────────────
+let timer = {
+  total: 40 * 60,     // seconds
+  remaining: 40 * 60,
+  running: false,
+  interval: null,
+  preset: 40,
+};
+
+// ── PROBLEM DATA (112 selected from Striver A2Z) ─────────────
+const PROBLEMS = [
+  // Week 1 - Arrays (Day 1-2)
+  {id:1,  name:"Largest Element in Array",       topic:"Arrays",      diff:"easy",   week:1, lc:"https://leetcode.com/problems/find-maximum-in-array/",                pattern:"Linear Scan"},
+  {id:2,  name:"Second Largest Element",          topic:"Arrays",      diff:"easy",   week:1, lc:"https://leetcode.com/problems/second-largest-digit-in-a-string/",    pattern:"Linear Scan"},
+  {id:3,  name:"Check if Array is Sorted",        topic:"Arrays",      diff:"easy",   week:1, lc:"https://leetcode.com/problems/check-if-array-is-sorted-and-rotated/",pattern:"Traversal"},
+  {id:4,  name:"Remove Duplicates (Sorted)",      topic:"Arrays",      diff:"easy",   week:1, lc:"https://leetcode.com/problems/remove-duplicates-from-sorted-array/",  pattern:"Two Pointer"},
+  {id:5,  name:"Move Zeros",                      topic:"Arrays",      diff:"easy",   week:1, lc:"https://leetcode.com/problems/move-zeroes/",                          pattern:"Two Pointer"},
+  {id:6,  name:"Missing Number",                  topic:"Arrays",      diff:"easy",   week:1, lc:"https://leetcode.com/problems/missing-number/",                       pattern:"Math/XOR"},
+  {id:7,  name:"Max Consecutive Ones",            topic:"Arrays",      diff:"easy",   week:1, lc:"https://leetcode.com/problems/max-consecutive-ones/",                 pattern:"Sliding Window"},
+  {id:8,  name:"Single Number (XOR)",             topic:"Arrays",      diff:"easy",   week:1, lc:"https://leetcode.com/problems/single-number/",                        pattern:"XOR"},
+  {id:9,  name:"Longest Subarray with Sum K",     topic:"Arrays",      diff:"medium", week:1, lc:"https://leetcode.com/problems/maximum-size-subarray-sum-equals-k/",  pattern:"Prefix Sum"},
+  {id:10, name:"Maximum Subarray (Kadane)",        topic:"Arrays",      diff:"medium", week:1, lc:"https://leetcode.com/problems/maximum-subarray/",                    pattern:"Kadane / DP"},
+  // Week 1 - Sorting (Day 3)
+  {id:11, name:"Sort Colors (Dutch Flag)",        topic:"Sorting",     diff:"medium", week:1, lc:"https://leetcode.com/problems/sort-colors/",                          pattern:"Three Pointer"},
+  {id:12, name:"Merge Sorted Arrays",             topic:"Sorting",     diff:"easy",   week:1, lc:"https://leetcode.com/problems/merge-sorted-array/",                   pattern:"Two Pointer"},
+  {id:13, name:"Best Time to Buy & Sell Stock",   topic:"Arrays",      diff:"easy",   week:1, lc:"https://leetcode.com/problems/best-time-to-buy-and-sell-stock/",      pattern:"Greedy"},
+  {id:14, name:"Product of Array Except Self",    topic:"Arrays",      diff:"medium", week:1, lc:"https://leetcode.com/problems/product-of-array-except-self/",         pattern:"Prefix Product"},
+  {id:15, name:"Trapping Rain Water",             topic:"Arrays",      diff:"hard",   week:1, lc:"https://leetcode.com/problems/trapping-rain-water/",                  pattern:"Two Pointer"},
+  // Week 1 - Strings (Day 4-5)
+  {id:16, name:"Reverse a String",               topic:"Strings",     diff:"easy",   week:1, lc:"https://leetcode.com/problems/reverse-string/",                        pattern:"Two Pointer"},
+  {id:17, name:"Valid Palindrome",                topic:"Strings",     diff:"easy",   week:1, lc:"https://leetcode.com/problems/valid-palindrome/",                      pattern:"Two Pointer"},
+  {id:18, name:"Valid Anagram",                   topic:"Strings",     diff:"easy",   week:1, lc:"https://leetcode.com/problems/valid-anagram/",                         pattern:"HashMap"},
+  {id:19, name:"Longest Common Prefix",           topic:"Strings",     diff:"easy",   week:1, lc:"https://leetcode.com/problems/longest-common-prefix/",                 pattern:"String"},
+  {id:20, name:"Group Anagrams",                  topic:"Strings",     diff:"medium", week:1, lc:"https://leetcode.com/problems/group-anagrams/",                        pattern:"HashMap+Sorting"},
+  {id:21, name:"Longest Palindromic Substring",   topic:"Strings",     diff:"medium", week:1, lc:"https://leetcode.com/problems/longest-palindromic-substring/",         pattern:"Expand Around Center"},
+  {id:22, name:"Reverse Words in a String",       topic:"Strings",     diff:"medium", week:1, lc:"https://leetcode.com/problems/reverse-words-in-a-string/",             pattern:"String"},
+  // Week 1 - Hashing (Day 6)
+  {id:23, name:"Two Sum",                         topic:"Hashing",     diff:"easy",   week:1, lc:"https://leetcode.com/problems/two-sum/",                              pattern:"HashMap"},
+  {id:24, name:"Contains Duplicate",              topic:"Hashing",     diff:"easy",   week:1, lc:"https://leetcode.com/problems/contains-duplicate/",                   pattern:"HashSet"},
+  {id:25, name:"Intersection of Two Arrays",      topic:"Hashing",     diff:"easy",   week:1, lc:"https://leetcode.com/problems/intersection-of-two-arrays/",           pattern:"HashSet"},
+  {id:26, name:"Subarray Sum Equals K",           topic:"Hashing",     diff:"medium", week:1, lc:"https://leetcode.com/problems/subarray-sum-equals-k/",                pattern:"Prefix Sum+HashMap"},
+  {id:27, name:"Longest Consecutive Sequence",    topic:"Hashing",     diff:"medium", week:1, lc:"https://leetcode.com/problems/longest-consecutive-sequence/",          pattern:"HashSet"},
+  // Week 2 - Binary Search (Day 8-9)
+  {id:28, name:"Binary Search",                   topic:"Binary Search",diff:"easy",  week:2, lc:"https://leetcode.com/problems/binary-search/",                        pattern:"Binary Search"},
+  {id:29, name:"First & Last Position",           topic:"Binary Search",diff:"medium",week:2, lc:"https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/",pattern:"Binary Search"},
+  {id:30, name:"Search Insert Position",          topic:"Binary Search",diff:"easy",  week:2, lc:"https://leetcode.com/problems/search-insert-position/",               pattern:"Binary Search"},
+  {id:31, name:"Find Peak Element",               topic:"Binary Search",diff:"medium",week:2, lc:"https://leetcode.com/problems/find-peak-element/",                    pattern:"Binary Search"},
+  {id:32, name:"Search in Rotated Sorted Array",  topic:"Binary Search",diff:"medium",week:2, lc:"https://leetcode.com/problems/search-in-rotated-sorted-array/",       pattern:"Binary Search"},
+  {id:33, name:"Minimum in Rotated Sorted Array", topic:"Binary Search",diff:"medium",week:2, lc:"https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/", pattern:"Binary Search"},
+  {id:34, name:"Koko Eating Bananas",             topic:"Binary Search",diff:"medium",week:2, lc:"https://leetcode.com/problems/koko-eating-bananas/",                  pattern:"BS on Answer"},
+  {id:35, name:"Capacity to Ship in D Days",      topic:"Binary Search",diff:"medium",week:2, lc:"https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/",pattern:"BS on Answer"},
+  // Week 2 - Two Pointers (Day 10)
+  {id:36, name:"Two Sum II (Sorted)",             topic:"Two Pointer", diff:"medium", week:2, lc:"https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/",     pattern:"Two Pointer"},
+  {id:37, name:"3Sum",                            topic:"Two Pointer", diff:"medium", week:2, lc:"https://leetcode.com/problems/3sum/",                                  pattern:"Two Pointer"},
+  {id:38, name:"Container With Most Water",       topic:"Two Pointer", diff:"medium", week:2, lc:"https://leetcode.com/problems/container-with-most-water/",             pattern:"Two Pointer"},
+  {id:39, name:"Valid Palindrome II",             topic:"Two Pointer", diff:"easy",   week:2, lc:"https://leetcode.com/problems/valid-palindrome-ii/",                   pattern:"Two Pointer"},
+  // Week 2 - Sliding Window (Day 11)
+  {id:40, name:"Max Average Subarray I",          topic:"Sliding Window",diff:"easy", week:2, lc:"https://leetcode.com/problems/maximum-average-subarray-i/",           pattern:"Fixed Window"},
+  {id:41, name:"Longest Substring Without Repeating",topic:"Sliding Window",diff:"medium",week:2,lc:"https://leetcode.com/problems/longest-substring-without-repeating-characters/",pattern:"Variable Window"},
+  {id:42, name:"Minimum Window Substring",        topic:"Sliding Window",diff:"hard", week:2, lc:"https://leetcode.com/problems/minimum-window-substring/",             pattern:"Variable Window"},
+  {id:43, name:"Permutation in String",           topic:"Sliding Window",diff:"medium",week:2, lc:"https://leetcode.com/problems/permutation-in-string/",               pattern:"Fixed Window"},
+  // Week 2 - Linked List (Day 12-13)
+  {id:44, name:"Reverse Linked List",             topic:"Linked List", diff:"easy",   week:2, lc:"https://leetcode.com/problems/reverse-linked-list/",                  pattern:"Pointer Reversal"},
+  {id:45, name:"Middle of Linked List",           topic:"Linked List", diff:"easy",   week:2, lc:"https://leetcode.com/problems/middle-of-the-linked-list/",            pattern:"Fast/Slow Pointer"},
+  {id:46, name:"Linked List Cycle",               topic:"Linked List", diff:"easy",   week:2, lc:"https://leetcode.com/problems/linked-list-cycle/",                    pattern:"Floyd's Algorithm"},
+  {id:47, name:"Merge Two Sorted Lists",          topic:"Linked List", diff:"easy",   week:2, lc:"https://leetcode.com/problems/merge-two-sorted-lists/",               pattern:"Merge"},
+  {id:48, name:"Remove Nth Node from End",        topic:"Linked List", diff:"medium", week:2, lc:"https://leetcode.com/problems/remove-nth-node-from-end-of-list/",     pattern:"Two Pointer"},
+  {id:49, name:"Palindrome Linked List",          topic:"Linked List", diff:"easy",   week:2, lc:"https://leetcode.com/problems/palindrome-linked-list/",               pattern:"Fast/Slow+Reverse"},
+  {id:50, name:"Add Two Numbers",                 topic:"Linked List", diff:"medium", week:2, lc:"https://leetcode.com/problems/add-two-numbers/",                      pattern:"Linked List Math"},
+  // Week 2 - Stack/Queue (Day 14)
+  {id:51, name:"Valid Parentheses",               topic:"Stack/Queue", diff:"easy",   week:2, lc:"https://leetcode.com/problems/valid-parentheses/",                    pattern:"Stack"},
+  {id:52, name:"Min Stack",                       topic:"Stack/Queue", diff:"medium", week:2, lc:"https://leetcode.com/problems/min-stack/",                            pattern:"Stack Design"},
+  {id:53, name:"Evaluate Reverse Polish Notation",topic:"Stack/Queue", diff:"medium", week:2, lc:"https://leetcode.com/problems/evaluate-reverse-polish-notation/",     pattern:"Stack"},
+  {id:54, name:"Daily Temperatures",             topic:"Stack/Queue", diff:"medium", week:2, lc:"https://leetcode.com/problems/daily-temperatures/",                   pattern:"Monotonic Stack"},
+  {id:55, name:"Next Greater Element I",          topic:"Stack/Queue", diff:"easy",   week:2, lc:"https://leetcode.com/problems/next-greater-element-i/",              pattern:"Monotonic Stack"},
+  // Week 3 - Recursion (Day 15-16)
+  {id:56, name:"Generate All Subsets",            topic:"Recursion",   diff:"medium", week:3, lc:"https://leetcode.com/problems/subsets/",                              pattern:"Backtracking"},
+  {id:57, name:"Combination Sum",                 topic:"Recursion",   diff:"medium", week:3, lc:"https://leetcode.com/problems/combination-sum/",                      pattern:"Backtracking"},
+  {id:58, name:"Permutations",                    topic:"Recursion",   diff:"medium", week:3, lc:"https://leetcode.com/problems/permutations/",                         pattern:"Backtracking"},
+  {id:59, name:"Letter Combinations Phone",       topic:"Recursion",   diff:"medium", week:3, lc:"https://leetcode.com/problems/letter-combinations-of-a-phone-number/",pattern:"Backtracking"},
+  {id:60, name:"Palindrome Partitioning",         topic:"Recursion",   diff:"medium", week:3, lc:"https://leetcode.com/problems/palindrome-partitioning/",              pattern:"Backtracking"},
+  {id:61, name:"N-Queens",                        topic:"Recursion",   diff:"hard",   week:3, lc:"https://leetcode.com/problems/n-queens/",                             pattern:"Backtracking"},
+  // Week 3 - Binary Trees (Day 17-18)
+  {id:62, name:"Inorder Traversal",              topic:"Trees",       diff:"easy",   week:3, lc:"https://leetcode.com/problems/binary-tree-inorder-traversal/",        pattern:"Tree DFS"},
+  {id:63, name:"Level Order Traversal",           topic:"Trees",       diff:"medium", week:3, lc:"https://leetcode.com/problems/binary-tree-level-order-traversal/",   pattern:"Tree BFS"},
+  {id:64, name:"Maximum Depth",                   topic:"Trees",       diff:"easy",   week:3, lc:"https://leetcode.com/problems/maximum-depth-of-binary-tree/",         pattern:"Tree DFS"},
+  {id:65, name:"Diameter of Binary Tree",         topic:"Trees",       diff:"easy",   week:3, lc:"https://leetcode.com/problems/diameter-of-binary-tree/",              pattern:"Tree DFS"},
+  {id:66, name:"Balanced Binary Tree",            topic:"Trees",       diff:"easy",   week:3, lc:"https://leetcode.com/problems/balanced-binary-tree/",                 pattern:"Tree DFS"},
+  {id:67, name:"Lowest Common Ancestor",          topic:"Trees",       diff:"medium", week:3, lc:"https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree/",pattern:"Tree DFS"},
+  {id:68, name:"Binary Tree Right Side View",     topic:"Trees",       diff:"medium", week:3, lc:"https://leetcode.com/problems/binary-tree-right-side-view/",          pattern:"Tree BFS"},
+  {id:69, name:"Path Sum",                        topic:"Trees",       diff:"easy",   week:3, lc:"https://leetcode.com/problems/path-sum/",                             pattern:"Tree DFS"},
+  {id:70, name:"Maximum Path Sum",                topic:"Trees",       diff:"hard",   week:3, lc:"https://leetcode.com/problems/binary-tree-maximum-path-sum/",         pattern:"Tree DFS"},
+  // Week 3 - BST (Day 19)
+  {id:71, name:"Search in BST",                   topic:"BST",         diff:"easy",   week:3, lc:"https://leetcode.com/problems/search-in-a-binary-search-tree/",      pattern:"BST"},
+  {id:72, name:"Validate BST",                    topic:"BST",         diff:"medium", week:3, lc:"https://leetcode.com/problems/validate-binary-search-tree/",          pattern:"BST+DFS"},
+  {id:73, name:"Kth Smallest in BST",             topic:"BST",         diff:"medium", week:3, lc:"https://leetcode.com/problems/kth-smallest-element-in-a-bst/",        pattern:"BST+Inorder"},
+  {id:74, name:"LCA in BST",                      topic:"BST",         diff:"medium", week:3, lc:"https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/",pattern:"BST"},
+  // Week 3 - Heap (Day 20)
+  {id:75, name:"Kth Largest Element",             topic:"Heap",        diff:"medium", week:3, lc:"https://leetcode.com/problems/kth-largest-element-in-an-array/",      pattern:"Min Heap"},
+  {id:76, name:"Top K Frequent Elements",         topic:"Heap",        diff:"medium", week:3, lc:"https://leetcode.com/problems/top-k-frequent-elements/",              pattern:"Min Heap+HashMap"},
+  {id:77, name:"K Closest Points to Origin",      topic:"Heap",        diff:"medium", week:3, lc:"https://leetcode.com/problems/k-closest-points-to-origin/",          pattern:"Max Heap"},
+  {id:78, name:"Merge K Sorted Lists",            topic:"Heap",        diff:"hard",   week:3, lc:"https://leetcode.com/problems/merge-k-sorted-lists/",                 pattern:"Min Heap"},
+  {id:79, name:"Find Median from Data Stream",    topic:"Heap",        diff:"hard",   week:3, lc:"https://leetcode.com/problems/find-median-from-data-stream/",         pattern:"Two Heaps"},
+  // Week 4 - Greedy (Day 22)
+  {id:80, name:"Jump Game",                       topic:"Greedy",      diff:"medium", week:4, lc:"https://leetcode.com/problems/jump-game/",                            pattern:"Greedy"},
+  {id:81, name:"Jump Game II",                    topic:"Greedy",      diff:"medium", week:4, lc:"https://leetcode.com/problems/jump-game-ii/",                         pattern:"Greedy"},
+  {id:82, name:"Merge Intervals",                 topic:"Greedy",      diff:"medium", week:4, lc:"https://leetcode.com/problems/merge-intervals/",                      pattern:"Sort+Greedy"},
+  {id:83, name:"Gas Station",                     topic:"Greedy",      diff:"medium", week:4, lc:"https://leetcode.com/problems/gas-station/",                          pattern:"Greedy"},
+  // Week 4 - Graphs (Day 23-24)
+  {id:84, name:"Number of Islands",              topic:"Graphs",      diff:"medium", week:4, lc:"https://leetcode.com/problems/number-of-islands/",                    pattern:"BFS/DFS"},
+  {id:85, name:"Flood Fill",                      topic:"Graphs",      diff:"easy",   week:4, lc:"https://leetcode.com/problems/flood-fill/",                           pattern:"BFS/DFS"},
+  {id:86, name:"Clone Graph",                     topic:"Graphs",      diff:"medium", week:4, lc:"https://leetcode.com/problems/clone-graph/",                          pattern:"BFS+HashMap"},
+  {id:87, name:"Course Schedule",                 topic:"Graphs",      diff:"medium", week:4, lc:"https://leetcode.com/problems/course-schedule/",                      pattern:"Topological Sort"},
+  {id:88, name:"Rotting Oranges",                 topic:"Graphs",      diff:"medium", week:4, lc:"https://leetcode.com/problems/rotting-oranges/",                      pattern:"BFS Multi-source"},
+  {id:89, name:"Shortest Path in Binary Matrix",  topic:"Graphs",      diff:"medium", week:4, lc:"https://leetcode.com/problems/shortest-path-in-binary-matrix/",       pattern:"BFS"},
+  {id:90, name:"Word Ladder",                     topic:"Graphs",      diff:"hard",   week:4, lc:"https://leetcode.com/problems/word-ladder/",                          pattern:"BFS"},
+  {id:91, name:"Topological Sort",               topic:"Graphs",      diff:"medium", week:4, lc:"https://leetcode.com/problems/course-schedule-ii/",                   pattern:"DFS/BFS"},
+  // Week 4 - DP (Day 25-26)
+  {id:92, name:"Climbing Stairs",                 topic:"DP",          diff:"easy",   week:4, lc:"https://leetcode.com/problems/climbing-stairs/",                      pattern:"1D DP"},
+  {id:93, name:"House Robber",                    topic:"DP",          diff:"medium", week:4, lc:"https://leetcode.com/problems/house-robber/",                         pattern:"1D DP"},
+  {id:94, name:"Coin Change",                     topic:"DP",          diff:"medium", week:4, lc:"https://leetcode.com/problems/coin-change/",                          pattern:"Unbounded Knapsack"},
+  {id:95, name:"Unique Paths",                    topic:"DP",          diff:"medium", week:4, lc:"https://leetcode.com/problems/unique-paths/",                         pattern:"Grid DP"},
+  {id:96, name:"Longest Common Subsequence",      topic:"DP",          diff:"medium", week:4, lc:"https://leetcode.com/problems/longest-common-subsequence/",           pattern:"2D DP"},
+  {id:97, name:"Edit Distance",                   topic:"DP",          diff:"medium", week:4, lc:"https://leetcode.com/problems/edit-distance/",                        pattern:"2D DP"},
+  {id:98, name:"Longest Increasing Subsequence",  topic:"DP",          diff:"medium", week:4, lc:"https://leetcode.com/problems/longest-increasing-subsequence/",       pattern:"1D DP + BS"},
+  {id:99, name:"0/1 Knapsack",                   topic:"DP",          diff:"medium", week:4, lc:"https://leetcode.com/problems/partition-equal-subset-sum/",           pattern:"2D DP"},
+];
+
+// ── PATTERN DATA ─────────────────────────────────────────────
+const PATTERNS = [
+  {
+    icon:"↔️", name:"Two Pointer", color:"#6c63ff",
+    when:"Sorted array · pair sum · palindrome · Dutch flag",
+    code:`int left = 0, right = arr.length - 1;
+while (left < right) {
+    if (arr[left] + arr[right] == target) return;
+    else if (sum < target) left++;
+    else right--;
+}`,
+    probs:["Two Sum II","3Sum","Container Water","Valid Palindrome"]
+  },
+  {
+    icon:"🪟", name:"Sliding Window", color:"#06b6d4",
+    when:"Subarray/substring of fixed or variable size k",
+    code:`// Variable window
+int left = 0, result = 0;
+Map<Char,Int> map = new HashMap<>();
+for (int right = 0; right < s.length(); right++) {
+    map.merge(s.charAt(right), 1, Integer::sum);
+    while (window invalid) { left++; }
+    result = Math.max(result, right - left + 1);
+}`,
+    probs:["Longest Substring","Min Window","Fruit Baskets","Permutation in String"]
+  },
+  {
+    icon:"🔍", name:"Binary Search", color:"#f59e0b",
+    when:"Sorted array · monotone search space · min/max feasible",
+    code:`int lo = 0, hi = arr.length - 1;
+while (lo <= hi) {
+    int mid = lo + (hi - lo) / 2; // no overflow
+    if (arr[mid] == target) return mid;
+    else if (arr[mid] < target) lo = mid + 1;
+    else hi = mid - 1;
+}`,
+    probs:["Binary Search","Rotated Array","Koko Bananas","Capacity Ship"]
+  },
+  {
+    icon:"#️⃣", name:"HashMap / Hashing", color:"#10b981",
+    when:"Frequency count · complement · anagram · seen before",
+    code:`Map<Integer,Integer> seen = new HashMap<>();
+for (int i = 0; i < nums.length; i++) {
+    int comp = target - nums[i];
+    if (seen.containsKey(comp))
+        return new int[]{seen.get(comp), i};
+    seen.put(nums[i], i);
+}`,
+    probs:["Two Sum","Group Anagrams","Subarray Sum K","Consecutive Sequence"]
+  },
+  {
+    icon:"🐢", name:"Fast & Slow Pointer", color:"#a855f7",
+    when:"Linked list cycle · middle node · palindrome LL",
+    code:`ListNode slow = head, fast = head;
+while (fast != null && fast.next != null) {
+    slow = slow.next;
+    fast = fast.next.next;
+    if (slow == fast) return true; // cycle!
+}
+// slow = middle of list`,
+    probs:["LL Cycle","Middle of LL","Palindrome LL","Reorder List"]
+  },
+  {
+    icon:"🌲", name:"Tree DFS", color:"#22c55e",
+    when:"Tree traversal · path sum · height · subtree problems",
+    code:`int dfs(TreeNode node) {
+    if (node == null) return 0; // base case
+    int left  = dfs(node.left);
+    int right = dfs(node.right);
+    // process current node
+    return Math.max(left, right) + 1;
+}`,
+    probs:["Max Depth","Diameter","LCA","Path Sum","Max Path Sum"]
+  },
+  {
+    icon:"🌊", name:"Tree BFS", color:"#38bdf8",
+    when:"Level-by-level · shortest path · right side view",
+    code:`Queue<TreeNode> q = new LinkedList<>();
+q.offer(root);
+while (!q.isEmpty()) {
+    int size = q.size();
+    for (int i = 0; i < size; i++) {
+        TreeNode node = q.poll();
+        if (node.left  != null) q.offer(node.left);
+        if (node.right != null) q.offer(node.right);
+    }
+}`,
+    probs:["Level Order","Right Side View","Zigzag Traversal"]
+  },
+  {
+    icon:"📊", name:"Monotonic Stack", color:"#ef4444",
+    when:"Next greater/smaller element · histogram · span",
+    code:`Deque<Integer> stack = new ArrayDeque<>();
+int[] result = new int[nums.length];
+Arrays.fill(result, -1);
+for (int i = 0; i < nums.length; i++) {
+    while (!stack.isEmpty() &&
+           nums[stack.peek()] < nums[i])
+        result[stack.pop()] = nums[i];
+    stack.push(i);
+}`,
+    probs:["Next Greater Element","Daily Temperatures","Largest Histogram"]
+  },
+  {
+    icon:"🔀", name:"Backtracking", color:"#f97316",
+    when:"All subsets · permutations · combinations · N-Queens",
+    code:`void bt(int start, List<Integer> cur) {
+    result.add(new ArrayList<>(cur)); // save
+    for (int i = start; i < nums.length; i++) {
+        cur.add(nums[i]);        // choose
+        bt(i + 1, cur);          // explore
+        cur.remove(cur.size()-1);// undo
+    }
+}`,
+    probs:["Subsets","Permutations","Combination Sum","N-Queens"]
+  },
+  {
+    icon:"🕸️", name:"BFS on Graph", color:"#8b5cf6",
+    when:"Shortest path · connected components · level-by-level graph",
+    code:`boolean[] visited = new boolean[n];
+Queue<Integer> q = new LinkedList<>();
+q.offer(start); visited[start] = true;
+while (!q.isEmpty()) {
+    int node = q.poll();
+    for (int nei : graph.get(node)) {
+        if (!visited[nei]) {
+            visited[nei] = true;
+            q.offer(nei);
+        }
+    }
+}`,
+    probs:["Number of Islands","Clone Graph","Rotting Oranges","Word Ladder"]
+  },
+  {
+    icon:"🧮", name:"Dynamic Programming", color:"#a78bfa",
+    when:"Optimal substructure · overlapping subproblems · min/max/count",
+    code:`// 1D DP  (e.g. Climbing Stairs)
+int[] dp = new int[n + 1];
+dp[0] = 1; dp[1] = 1;
+for (int i = 2; i <= n; i++)
+    dp[i] = dp[i-1] + dp[i-2];
+
+// 2D DP  (e.g. LCS)
+for (int i = 1; i <= m; i++)
+    for (int j = 1; j <= n; j++)
+        dp[i][j] = (a[i]==b[j]) ?
+            dp[i-1][j-1]+1 : Math.max(dp[i-1][j],dp[i][j-1]);`,
+    probs:["Climbing Stairs","House Robber","Coin Change","LCS","Edit Distance"]
+  },
+  {
+    icon:"⛏️", name:"Heap / Priority Queue", color:"#f43f5e",
+    when:"Top K elements · Kth largest/smallest · merge K sorted",
+    code:`// Min Heap (default)
+PriorityQueue<Integer> minH = new PriorityQueue<>();
+
+// Max Heap
+PriorityQueue<Integer> maxH =
+    new PriorityQueue<>(Collections.reverseOrder());
+
+// Custom comparator
+PriorityQueue<int[]> pq =
+    new PriorityQueue<>((a, b) -> a[1] - b[1]);`,
+    probs:["Kth Largest","Top K Frequent","K Closest Points","Merge K Lists"]
+  },
+  {
+    icon:"➕", name:"Prefix Sum", color:"#84cc16",
+    when:"Range sum query · subarray sum · product except self",
+    code:`int[] prefix = new int[n + 1];
+for (int i = 0; i < n; i++)
+    prefix[i+1] = prefix[i] + arr[i];
+
+// Range sum [l, r]:
+int sum = prefix[r+1] - prefix[l];
+
+// Subarray sum equals K:
+Map<Integer,Integer> map = new HashMap<>();
+map.put(0, 1); int count = 0, ps = 0;
+for (int num : nums) {
+    ps += num;
+    count += map.getOrDefault(ps - k, 0);
+    map.merge(ps, 1, Integer::sum);
+}`,
+    probs:["Range Sum Query","Subarray Sum K","Product Except Self"]
+  },
+];
+
+// ── JAVA TOOLKIT DATA ────────────────────────────────────────
+const JAVA_TOOLKIT = [
+  {
+    name:"HashMap<K,V>", type:"java.util.HashMap",
+    code:`Map<String, Integer> map = new HashMap<>();
+map.put("key", 1);
+map.get("key");           // null if missing
+map.getOrDefault("k", 0);
+map.containsKey("key");
+map.merge("key", 1, Integer::sum); // freq count
+map.getOrDefault(key, 0) + 1;`,
+    ops:[["put/get","O(1)*"],["containsKey","O(1)*"],["remove","O(1)*"]]
+  },
+  {
+    name:"HashSet<E>", type:"java.util.HashSet",
+    code:`Set<Integer> set = new HashSet<>();
+set.add(42);
+set.contains(42); // O(1)*
+set.remove(42);
+set.size();
+// Tip: use for "seen before" checks`,
+    ops:[["add","O(1)*"],["contains","O(1)*"],["remove","O(1)*"]]
+  },
+  {
+    name:"ArrayDeque<E>", type:"java.util.ArrayDeque",
+    code:`// Use as STACK (replaces Stack class)
+Deque<Integer> stack = new ArrayDeque<>();
+stack.push(1);   stack.pop();   stack.peek();
+
+// Use as QUEUE
+Queue<Integer> q = new ArrayDeque<>();
+q.offer(1);  q.poll();  q.peek();`,
+    ops:[["push/pop/peek","O(1)"],["offer/poll","O(1)"]]
+  },
+  {
+    name:"PriorityQueue<E>", type:"java.util.PriorityQueue",
+    code:`// Min Heap (default)
+PriorityQueue<Integer> minH = new PriorityQueue<>();
+
+// Max Heap
+PriorityQueue<Integer> maxH =
+    new PriorityQueue<>(Collections.reverseOrder());
+
+// Custom: sort by second element
+PriorityQueue<int[]> pq =
+    new PriorityQueue<>((a, b) -> a[1] - b[1]);
+
+pq.offer(val);  pq.poll();  pq.peek();`,
+    ops:[["offer (add)","O(log n)"],["poll (remove min)","O(log n)"],["peek","O(1)"]]
+  },
+  {
+    name:"TreeMap<K,V>", type:"java.util.TreeMap",
+    code:`TreeMap<Integer,Integer> tm = new TreeMap<>();
+tm.put(3, "c");
+tm.firstKey();        // smallest
+tm.lastKey();         // largest
+tm.floorKey(5);       // largest <= 5
+tm.ceilingKey(5);     // smallest >= 5
+tm.headMap(5);        // keys < 5`,
+    ops:[["put/get","O(log n)"],["firstKey/lastKey","O(log n)"],["floor/ceiling","O(log n)"]]
+  },
+  {
+    name:"ArrayList<E>", type:"java.util.ArrayList",
+    code:`List<Integer> list = new ArrayList<>();
+list.add(1);              // amortized O(1)
+list.get(0);              // O(1)
+list.set(0, 99);          // O(1)
+list.remove(Integer.valueOf(1)); // O(n)
+Collections.sort(list);
+Collections.reverse(list);`,
+    ops:[["add","O(1)*"],["get","O(1)"],["remove by value","O(n)"]]
+  },
+  {
+    name:"Arrays (utility)", type:"java.util.Arrays",
+    code:`Arrays.sort(arr);               // O(n log n)
+Arrays.sort(arr, 0, 5);        // partial sort
+Arrays.fill(arr, 0);            // fill all
+Arrays.copyOf(arr, len);        // copy
+Arrays.copyOfRange(arr, l, r);  // slice
+int idx = Arrays.binarySearch(arr, target);
+Arrays.stream(arr).sum();`,
+    ops:[["sort","O(n log n)"],["fill","O(n)"],["binarySearch","O(log n)"]]
+  },
+  {
+    name:"StringBuilder", type:"java.lang.StringBuilder",
+    code:`StringBuilder sb = new StringBuilder();
+sb.append("hello");     // O(1)*
+sb.insert(0, "start");  // O(n)
+sb.delete(0, 3);        // O(n)
+sb.reverse();           // O(n)
+sb.charAt(i);           // O(1)
+sb.toString();          // O(n)`,
+    ops:[["append","O(1)*"],["reverse","O(n)"],["toString","O(n)"]]
+  },
+];
+
+// ── DAY LABELS ───────────────────────────────────────────────
+const DAY_LABELS = [
+  "Arrays","Arrays","Sorting","Strings","Strings","Hashing","Arrays",
+  "Bin.Search","Bin.Search","Two Ptr","Slide.Win","LL","LL","Stack/Q",
+  "Recursion","Recursion","Trees","Trees","BST","Heap","Mock 1",
+  "Greedy","Graphs","Graphs","DP","DP","Mixed","Java","Mock 2","Final"
+];
+const MOCK_DAYS = new Set([21,29,30]);
+
+// ═══════════════════════════════════════════════════════════════
+//   PERSISTENCE
+// ═══════════════════════════════════════════════════════════════
+function saveState() {
+  const s = {
+    completedDays: [...state.completedDays],
+    solvedProblems: [...state.solvedProblems],
+    problemNotes: state.problemNotes,
+    mistakes: state.mistakes,
+    sessions: state.sessions,
+  };
+  localStorage.setItem('dsa30_state', JSON.stringify(s));
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem('dsa30_state');
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    state.completedDays  = new Set(s.completedDays  || []);
+    state.solvedProblems = new Set(s.solvedProblems  || []);
+    state.problemNotes   = s.problemNotes || {};
+    state.mistakes       = s.mistakes     || [];
+    state.sessions       = s.sessions     || 0;
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function goPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  if (name === 'practice') renderProbList();
+  if (name === 'patterns') renderPatterns();
+  if (name === 'java')     renderJavaToolkit();
+  if (name === 'mistakes') renderMistakes();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   TIMER ENGINE
+// ═══════════════════════════════════════════════════════════════
+function setPreset(mins) {
+  timer.preset = mins;
+  timer.total = mins * 60;
+  if (!timer.running) { timer.remaining = timer.total; updateTimerUI(); }
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.preset-btn').forEach(b => {
+    if (parseInt(b.textContent) === mins) b.classList.add('active');
+  });
+}
+
+function timerToggle() {
+  if (timer.running) {
+    clearInterval(timer.interval);
+    timer.running = false;
+    document.getElementById('mainTimerBtn').textContent = '▶ Resume';
+    document.getElementById('miniStartBtn').textContent = '▶ Resume';
+    document.getElementById('timerLabel').textContent = 'Paused';
+    document.getElementById('timerStatus').textContent = 'Session paused. Click Resume when ready.';
+  } else {
+    timer.running = true;
+    document.getElementById('mainTimerBtn').textContent = '⏸ Pause';
+    document.getElementById('miniStartBtn').textContent = '⏸ Pause';
+    document.getElementById('timerLabel').textContent = 'Running';
+    document.getElementById('timerStatus').textContent = 'Session active — stay focused!';
+    timer.interval = setInterval(timerTick, 1000);
+  }
+}
+
+function timerTick() {
+  if (timer.remaining <= 0) {
+    timerDone(); return;
+  }
+  timer.remaining--;
+  updateTimerUI();
+
+  const pct = timer.remaining / timer.total;
+  // Warnings
+  if (timer.remaining === 600) toast('⏱ 10 minutes remaining!', 'warning');
+  if (timer.remaining === 300) toast('⚠️ 5 minutes left — wrap up!', 'warning');
+  if (timer.remaining === 60)  {
+    toast('🚨 1 minute! Note your approach!', 'danger');
+    document.getElementById('timerWarning').style.display = 'block';
+  }
+
+  // Color shifts
+  const fill = document.getElementById('ringFill');
+  const mini = document.getElementById('miniTimerDisplay');
+  if (timer.remaining <= 60)       { fill.style.stroke = '#ef4444'; mini.className = 'mini-timer-display danger'; }
+  else if (timer.remaining <= 300) { fill.style.stroke = '#f59e0b'; mini.className = 'mini-timer-display warning'; }
+  else                             { fill.style.stroke = 'var(--accent3)'; mini.className = 'mini-timer-display'; }
+}
+
+function timerDone() {
+  clearInterval(timer.interval);
+  timer.running = false;
+  timer.remaining = 0;
+  state.sessions++;
+  saveState();
+  updateStats();
+
+  document.getElementById('mainTimerBtn').textContent = '▶ Start';
+  document.getElementById('miniStartBtn').textContent = '▶ Start';
+  document.getElementById('timerLabel').textContent = 'Done!';
+  document.getElementById('timerStatus').textContent = '🎉 Session complete! Great work!';
+  document.getElementById('timerWarning').style.display = 'none';
+  document.getElementById('ringFill').style.stroke = 'var(--green)';
+  document.getElementById('miniTimerDisplay').className = 'mini-timer-display';
+  document.getElementById('miniTimerDisplay').style.color = 'var(--green)';
+  toast('🎉 40-min session done! ' + state.sessions + ' sessions total.', 'success');
+  updateTimerUI();
+}
+
+function timerReset() {
+  clearInterval(timer.interval);
+  timer.running = false;
+  timer.remaining = timer.total;
+  document.getElementById('mainTimerBtn').textContent = '▶ Start';
+  document.getElementById('miniStartBtn').textContent = '▶ Start';
+  document.getElementById('timerLabel').textContent = 'Ready';
+  document.getElementById('timerStatus').textContent = 'Set your timer and start the session.';
+  document.getElementById('timerWarning').style.display = 'none';
+  document.getElementById('ringFill').style.stroke = 'var(--accent3)';
+  document.getElementById('miniTimerDisplay').className = 'mini-timer-display';
+  document.getElementById('miniTimerDisplay').style.color = '';
+  updateTimerUI();
+}
+
+function updateTimerUI() {
+  const rem = timer.remaining;
+  const mm = Math.floor(rem / 60);
+  const ss = rem % 60;
+  const mmStr = String(mm).padStart(2,'0');
+  const ssStr = ':' + String(ss).padStart(2,'0');
+
+  document.getElementById('timerMM').textContent = mmStr;
+  document.getElementById('timerSS').textContent = ssStr;
+  document.getElementById('miniTimerDisplay').textContent = mmStr + ssStr;
+
+  // Ring
+  const circ = 2 * Math.PI * 95; // r=95
+  const pct = timer.remaining / timer.total;
+  const offset = circ * (1 - pct);
+  document.getElementById('ringFill').setAttribute('stroke-dasharray', circ);
+  document.getElementById('ringFill').setAttribute('stroke-dashoffset', offset);
+
+  // Mini bar
+  document.getElementById('miniTimerFill').style.width = (pct * 100) + '%';
+  const fillColor = timer.remaining <= 60 ? '#ef4444' : timer.remaining <= 300 ? '#f59e0b' : 'var(--accent3)';
+  document.getElementById('miniTimerFill').style.background = fillColor;
+}
+
+function openTimer() {
+  const prob = state.currentProblem;
+  document.getElementById('timerProblemTag').textContent = prob ? `📌 ${prob.topic}` : '⏱ Practice Session';
+  document.getElementById('timerProblemName').textContent = prob ? prob.name : '40-Minute Coding Round';
+  document.getElementById('timerModal').classList.add('open');
+}
+function closeTimer() { document.getElementById('timerModal').classList.remove('open'); }
+
+// Close modal on backdrop click
+document.getElementById('timerModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('timerModal')) closeTimer();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//   DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+function renderCalendar() {
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  for (let d = 1; d <= 30; d++) {
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell';
+    cell.id = 'cal-'+d;
+    if (state.completedDays.has(d)) cell.classList.add('done');
+    if (d === state.currentDay) cell.classList.add('today');
+    if (MOCK_DAYS.has(d)) cell.classList.add('mock');
+    cell.innerHTML = `<div class="cal-check">✓</div><div class="cal-n">${d}</div><div class="cal-lbl">${DAY_LABELS[d-1]}</div>`;
+    cell.addEventListener('click', () => {
+      state.completedDays.has(d) ? state.completedDays.delete(d) : state.completedDays.add(d);
+      cell.classList.toggle('done');
+      updateStats();
+      saveState();
+    });
+    grid.appendChild(cell);
+  }
+}
+
+function updateStats() {
+  const days = state.completedDays.size;
+  const probs = state.solvedProblems.size;
+  const total = PROBLEMS.length;
+  const pct = Math.round((days / 30) * 100);
+
+  document.getElementById('statDays').textContent = days;
+  document.getElementById('statProbs').textContent = probs;
+  document.getElementById('statStreak').textContent = calcStreak();
+  document.getElementById('statSessions').textContent = state.sessions;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('overallPct').textContent = pct + '%';
+  document.getElementById('overallFill').style.width = pct + '%';
+
+  const streak = calcStreak();
+  document.getElementById('streakBadge').textContent = streak;
+  document.getElementById('dayBadge').textContent = state.currentDay;
+
+  // Nav badge
+  document.getElementById('navBadge').textContent = probs;
+
+  // Week fills
+  const w = [0,0,0,0];
+  const wt = [0,0,0,0];
+  PROBLEMS.forEach(p => { wt[p.week-1]++; if (state.solvedProblems.has(p.id)) w[p.week-1]++; });
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('wfill'+i);
+    if (el) el.style.width = (wt[i-1] ? (w[i-1]/wt[i-1]*100) : 0) + '%';
+  }
+
+  // Solved count
+  const sc = document.getElementById('solvedCount');
+  const tc = document.getElementById('totalCount');
+  if (sc) sc.textContent = probs;
+  if (tc) tc.textContent = total;
+}
+
+function calcStreak() {
+  let streak = 0;
+  for (let d = state.currentDay; d >= 1; d--) {
+    if (state.completedDays.has(d)) streak++;
+    else break;
+  }
+  return streak;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   PRACTICE
+// ═══════════════════════════════════════════════════════════════
+function renderProbList() {
+  const list = document.getElementById('probList');
+  list.innerHTML = '';
+  const f = state.currentFilter;
+  const filtered = PROBLEMS.filter(p => {
+    if (f === 'all') return true;
+    if (f === 'easy') return p.diff === 'easy';
+    if (f === 'medium') return p.diff === 'medium';
+    if (f === 'hard') return p.diff === 'hard';
+    if (f === 'unsolved') return !state.solvedProblems.has(p.id);
+    return true;
+  });
+  filtered.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'prob-item' + (state.solvedProblems.has(p.id) ? ' solved' : '') + (state.currentProblem?.id === p.id ? ' selected' : '');
+    div.id = 'prob-item-'+p.id;
+    div.innerHTML = `
+      <div class="prob-status">${state.solvedProblems.has(p.id) ? '✓' : ''}</div>
+      <div class="prob-info">
+        <div class="prob-name">${p.name}</div>
+        <div class="prob-meta">${p.topic} · Day ${getDayForProblem(p)}</div>
+      </div>
+      <span class="diff-badge diff-${p.diff}">${cap(p.diff)}</span>
+    `;
+    div.addEventListener('click', () => selectProblem(p));
+    list.appendChild(div);
+  });
+}
+
+function getDayForProblem(p) {
+  if (p.week===1) return '1-7';
+  if (p.week===2) return '8-14';
+  if (p.week===3) return '15-21';
+  return '22-30';
+}
+
+function applyFilter(btn, f) {
+  state.currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderProbList();
+}
+
+function selectProblem(p) {
+  state.currentProblem = p;
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('solverCard').style.display = 'block';
+
+  document.getElementById('spTitle').textContent = p.name;
+  document.getElementById('spDiff').className = 'diff-badge diff-'+p.diff;
+  document.getElementById('spDiff').textContent = cap(p.diff);
+  document.getElementById('spLink').href = p.lc;
+  document.getElementById('spTags').innerHTML = `<span class="prob-tag">${p.topic}</span><span class="prob-tag">${p.pattern}</span><span class="prob-tag">Week ${p.week}</span>`;
+
+  // Load saved notes
+  const notes = state.problemNotes[p.id] || {};
+  document.getElementById('tp-pattern').value  = notes.pattern  || '';
+  document.getElementById('tp-brute').value    = notes.brute    || '';
+  document.getElementById('tp-optimal').value  = notes.optimal  || '';
+  document.getElementById('tp-why').value      = notes.why      || '';
+  document.getElementById('tp-code').value     = notes.code     || '';
+  document.getElementById('tp-time').value     = notes.time     || '';
+  document.getElementById('tp-space').value    = notes.space    || '';
+  document.getElementById('tp-wrong').value    = notes.wrong    || '';
+
+  // Update selected highlight
+  document.querySelectorAll('.prob-item').forEach(el => el.classList.remove('selected'));
+  const el = document.getElementById('prob-item-'+p.id);
+  if (el) el.classList.add('selected');
+}
+
+function saveNotes() {
+  if (!state.currentProblem) return;
+  const id = state.currentProblem.id;
+  state.problemNotes[id] = {
+    pattern: document.getElementById('tp-pattern').value,
+    brute:   document.getElementById('tp-brute').value,
+    optimal: document.getElementById('tp-optimal').value,
+    why:     document.getElementById('tp-why').value,
+    code:    document.getElementById('tp-code').value,
+    time:    document.getElementById('tp-time').value,
+    space:   document.getElementById('tp-space').value,
+    wrong:   document.getElementById('tp-wrong').value,
+  };
+  saveState();
+  toast('💾 Notes saved!', 'success');
+}
+
+function markSolved() {
+  if (!state.currentProblem) return;
+  saveNotes();
+  const id = state.currentProblem.id;
+  state.solvedProblems.add(id);
+  saveState();
+  updateStats();
+  renderProbList();
+  selectProblem(state.currentProblem);
+  toast('✅ ' + state.currentProblem.name + ' marked solved!', 'success');
+}
+
+function addToMistakes() {
+  if (!state.currentProblem) return;
+  const p = state.currentProblem;
+  const wrong = document.getElementById('tp-wrong').value;
+  if (!wrong.trim()) { toast('Fill in "What I Got Wrong" first', 'warning'); return; }
+  state.mistakes.push({
+    id: Date.now(),
+    problem: p.name,
+    pattern: document.getElementById('tp-pattern').value || p.pattern,
+    tried: document.getElementById('tp-brute').value,
+    correct: document.getElementById('tp-optimal').value,
+    key: wrong,
+    date: new Date().toLocaleDateString(),
+  });
+  saveState();
+  toast('❌ Added to Mistakes journal', 'info');
+}
+
+function clearForm() {
+  ['tp-pattern','tp-brute','tp-optimal','tp-why','tp-code','tp-time','tp-space','tp-wrong']
+    .forEach(id => document.getElementById(id).value = '');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   PATTERNS PAGE
+// ═══════════════════════════════════════════════════════════════
+function renderPatterns(q='') {
+  const grid = document.getElementById('patternGrid');
+  if (!grid) return;
+  const filtered = PATTERNS.filter(p =>
+    !q || p.name.toLowerCase().includes(q.toLowerCase()) ||
+    p.when.toLowerCase().includes(q.toLowerCase())
+  );
+  grid.innerHTML = filtered.map(p => `
+    <div class="pat-card">
+      <div class="pat-card-head" style="border-left:3px solid ${p.color}">
+        <span class="pat-icon">${p.icon}</span>
+        <div><h4>${p.name}</h4><div class="pat-when">${p.when}</div></div>
+      </div>
+      <div class="pat-body">
+        <div class="pat-code">${escHtml(p.code)}</div>
+        <div class="pat-problems">${p.probs.map(pr=>`<span class="pat-prob">${pr}</span>`).join('')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterPatterns() {
+  renderPatterns(document.getElementById('patSearch').value);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   JAVA TOOLKIT PAGE
+// ═══════════════════════════════════════════════════════════════
+function renderJavaToolkit() {
+  const grid = document.getElementById('jtGrid');
+  if (!grid) return;
+  grid.innerHTML = JAVA_TOOLKIT.map(j => `
+    <div class="jt-card">
+      <div class="jt-header">
+        <span class="jt-name">${j.name}</span>
+        <span class="jt-type">${j.type}</span>
+      </div>
+      <div class="jt-body">
+        <div class="jt-code">${escHtml(j.code)}</div>
+        <table class="complexity-table">
+          <tr><th>Operation</th><th>Complexity</th></tr>
+          ${j.ops.map(([op,c])=>`<tr><td>${op}</td><td class="${c.startsWith('O(1)')? 'ok':c.startsWith('O(log')? 'med':'bad'}">${c}</td></tr>`).join('')}
+        </table>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   MISTAKES PAGE
+// ═══════════════════════════════════════════════════════════════
+function addMistake() {
+  const prob    = document.getElementById('mf-prob').value.trim();
+  const pattern = document.getElementById('mf-pattern').value.trim();
+  const tried   = document.getElementById('mf-tried').value.trim();
+  const correct = document.getElementById('mf-correct').value.trim();
+  const key     = document.getElementById('mf-key').value.trim();
+  if (!prob) { toast('Enter problem name', 'warning'); return; }
+  state.mistakes.push({ id: Date.now(), problem:prob, pattern, tried, correct, key, date: new Date().toLocaleDateString() });
+  saveState();
+  ['mf-prob','mf-pattern','mf-tried','mf-correct','mf-key'].forEach(id => document.getElementById(id).value='');
+  renderMistakes();
+  toast('❌ Mistake logged!', 'info');
+}
+
+function deleteMistake(id) {
+  state.mistakes = state.mistakes.filter(m => m.id !== id);
+  saveState();
+  renderMistakes();
+  toast('Deleted', 'info');
+}
+
+function renderMistakes() {
+  const list = document.getElementById('mistakesList');
+  if (!list) return;
+  if (state.mistakes.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--text3);padding:40px;">No mistakes logged yet — keep solving! 💪</div>';
+    return;
+  }
+  list.innerHTML = '<div class="mistake-list">' + [...state.mistakes].reverse().map(m => `
+    <div class="mistake-card">
+      <div class="mc-header">
+        <div>
+          <div class="mc-title">${m.problem}</div>
+          <span class="mc-pattern">${m.pattern || 'No pattern'}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="mc-date">${m.date}</span>
+          <button class="delete-btn" onclick="deleteMistake(${m.id})">🗑</button>
+        </div>
+      </div>
+      ${m.tried   ? `<div class="mc-section"><div class="mc-label">What I Tried</div><div class="mc-text">${m.tried}</div></div>` : ''}
+      ${m.correct ? `<div class="mc-section"><div class="mc-label">Correct Approach</div><div class="mc-text">${m.correct}</div></div>` : ''}
+      ${m.key     ? `<div class="mc-section"><div class="mc-label">Key Insight</div><div class="mc-text">${m.key}</div></div>` : ''}
+    </div>
+  `).join('') + '</div>';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   TOAST
+// ═══════════════════════════════════════════════════════════════
+function toast(msg, type='info') {
+  const div = document.createElement('div');
+  div.className = 'toast ' + type;
+  div.innerHTML = msg;
+  document.getElementById('toastContainer').appendChild(div);
+  setTimeout(() => div.remove(), 3000);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   UTILS
+// ═══════════════════════════════════════════════════════════════
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeTimer(); return; }
+  if (e.key === ' ' && document.getElementById('timerModal').classList.contains('open')) {
+    e.preventDefault(); timerToggle();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//   INIT
+// ═══════════════════════════════════════════════════════════════
+function init() {
+  loadState();
+  renderCalendar();
+  updateStats();
+  updateTimerUI();
+  setPreset(40); // default preset
+
+  // Welcome toast
+  setTimeout(() => {
+    const solved = state.solvedProblems.size;
+    if (solved === 0) {
+      toast('👋 Welcome! Start with Day 1 → Select a problem → Hit the 40-min timer!', 'info');
+    } else {
+      toast(`Welcome back! 🔥 ${solved} problems solved, ${state.sessions} sessions done.`, 'success');
+    }
+  }, 800);
+}
+
+init();
+</script>
+</body>
+</html>
